@@ -18,7 +18,7 @@ const Header = () => {
             <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
             <Link to="/about" className="nav-link" onClick={() => setIsMenuOpen(false)}>About</Link>
             <Link to="/features" className="nav-link" onClick={() => setIsMenuOpen(false)}>Features</Link>
-            <Link to="/impact" className="nav-link" onClick={() => setIsMenuOpen(false)}>Impact</Link>
+            <Link to="/impact-showcase" className="nav-link" onClick={() => setIsMenuOpen(false)}>Impact Showcase</Link>
             {/* Dev preview links — remove auth guard later */}
             <Link to="/volunteer/onboarding" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>Onboarding</Link>
             <Link to="/volunteer/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>Vol. Dashboard</Link>

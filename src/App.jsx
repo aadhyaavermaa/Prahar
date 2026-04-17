@@ -9,6 +9,8 @@ import Signup from './pages/Signup'
 import Onboarding from './pages/volunteer/Onboarding'
 import VolunteerDashboard from './pages/volunteer/Dashboard'
 import NgoDashboard from './pages/ngo/Dashboard'
+import TaskMapPage from './pages/TaskMapPage'
+import ImpactShowcase from './pages/ImpactShowcase'
 import './index.css'
 
 function App() {
@@ -38,6 +40,12 @@ function App() {
             <NgoDashboard />
           </ProtectedRoute>
         } />
+
+        {/* Task Map — full-page, no layout wrapper */}
+        <Route path="/map" element={<TaskMapPage />} />
+
+        {/* Impact Showcase — with layout */}
+        <Route path="/impact-showcase" element={<WithLayout><ImpactShowcase /></WithLayout>} />
       </Routes>
     </AuthProvider>
   )

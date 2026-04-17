@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
+import { subscribeToMyTasks } from '../../firebase'
 
 // Mock data — replace with Firestore queries later
 const MOCK_TASKS = [
@@ -48,6 +49,16 @@ const VolunteerDashboard = () => {
   const devProfile = userProfile || {}
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('active')
+  const [mapTasks, setMapTasks] = useState([])
+
+  // Real-time listener for tasks joined from the map
+  useEffect(() => {
+    if (!user) return
+    const unsub = subscribeToMyTasks(user.uid, (tasks) => {
+      setMapTasks(tasks)
+    })
+    return () => unsub()
+  }, [user])
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -146,9 +157,67 @@ const VolunteerDashboard = () => {
             <button className="btn btn-primary btn-sm" disabled>+ Find Opportunities</button>
           </div>
 
+          {/* ── Crisis Map Tasks (real-time from Firestore) ── */}
+          {mapTasks.length > 0 && (
+            <div style={{
+              background: 'white', border: '1px solid #e5e7eb', borderRadius: 14,
+              padding: '1.25rem', marginBottom: '0.25rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>🗺️</span>
+                <span style={{ fontWeight: 700, color: '#1f2937', fontSize: 15 }}>Crisis Map Tasks</span>
+                <span style={{
+                  background: '#fee2e2', color: '#dc2626', fontSize: 11, fontWeight: 700,
+                  padding: '2px 8px', borderRadius: 99,
+                }}>● Live · {mapTasks.length}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {mapTasks.map(t => (
+                  <div key={t.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px',
+                    background: t.isEmergency ? '#fff5f5' : '#f0fdf4',
+                    border: `1px solid ${t.isEmergency ? '#fecaca' : '#bbf7d0'}`,
+                    borderRadius: 10, gap: 10,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        {t.isEmergency && <span style={{ fontSize: 12 }}>🚨</span>}
+                        <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 13 }}>{t.taskTitle}</span>
+                        {t.isEmergency && (
+                          <span style={{
+                            background: '#fee2e2', color: '#dc2626', fontSize: 10, fontWeight: 700,
+                            padding: '1px 6px', borderRadius: 99,
+                          }}>Emergency</span>
+                        )}
+                      </div>
+                      <div style={{ color: '#6b7280', fontSize: 11 }}>
+                        📍 {t.zoneName} · {t.zoneDomain}
+                        {t.joinedAt?.toDate && ` · Joined ${t.joinedAt.toDate().toLocaleTimeString()}`}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      {t.taskType === 'paid' ? (
+                        <div>
+                          <div style={{ color: '#16a34a', fontWeight: 800, fontSize: 15 }}>₹{t.totalPay}</div>
+                          {t.urgencyBonus > 0 && (
+                            <div style={{ color: '#dc2626', fontSize: 10, fontWeight: 600 }}>
+                              +₹{t.urgencyBonus} urgency
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#2563eb', fontSize: 12, fontWeight: 600 }}>Volunteer</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Point summary cards */}
-          <div className="vdash-cards">
-            <div className="vdash-card vdash-card--green">
+          <div className="vdash-cards">            <div className="vdash-card vdash-card--green">
               <div className="vdash-card-icon">🏆</div>
               <div className="vdash-card-val">{totalPoints}</div>
               <div className="vdash-card-lbl">Total Points</div>

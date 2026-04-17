@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import MiniMapPreview from '../components/MiniMapPreview'
 
 const Landing = () => {
   return (
@@ -43,6 +44,8 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      <MiniMapPreview />
 
       <section className="features">
         <div className="container">
