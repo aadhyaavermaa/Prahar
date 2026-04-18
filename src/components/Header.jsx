@@ -18,6 +18,7 @@ const Header = () => {
             <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
             <Link to="/map" className="nav-link" onClick={() => setIsMenuOpen(false)}>🗺️ Live Map</Link>
             <Link to="/impact" className="nav-link" onClick={() => setIsMenuOpen(false)}>📰 Impact</Link>
+            <Link to="/leaderboard" className="nav-link" onClick={() => setIsMenuOpen(false)}>🏆 Leaderboard</Link>
             <Link to="/volunteer/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>Vol. Dashboard</Link>
             <Link to="/ngo/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>NGO Dashboard</Link>
           </div>

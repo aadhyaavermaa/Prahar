@@ -11,6 +11,7 @@ import VolunteerDashboard from './pages/volunteer/Dashboard'
 import NgoDashboard from './pages/ngo/Dashboard'
 import TaskMapPage from './pages/TaskMapPage'
 import ImpactShowcase from './pages/ImpactShowcase'
+import Leaderboard from './pages/Leaderboard'
 import './index.css'
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
 
         <Route path="/map" element={<WithLayout><TaskMapPage /></WithLayout>} />
         <Route path="/impact" element={<WithLayout><ImpactShowcase /></WithLayout>} />
+        <Route path="/leaderboard" element={<WithLayout><Leaderboard /></WithLayout>} />
 
         <Route path="/volunteer/onboarding" element={
           <ProtectedRoute allowedRoles={['volunteer']}>
