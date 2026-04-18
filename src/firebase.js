@@ -18,24 +18,31 @@ export const googleProvider = new GoogleAuthProvider()
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider)
 
-// Save user role doc under /users/{uid}
 export const createUserProfile = async (uid, data) => {
   await setDoc(doc(db, 'users', uid), data, { merge: true })
 }
 
-// Get user role doc
 export const getUserProfile = async (uid) => {
   const snap = await getDoc(doc(db, 'users', uid))
   return snap.exists() ? snap.data() : null
 }
 
-// Get volunteer onboarding doc
 export const getVolunteerProfile = async (uid) => {
   const snap = await getDoc(doc(db, 'volunteers', uid))
   return snap.exists() ? snap.data() : null
 }
 
-// Save volunteer onboarding data
 export const saveVolunteerProfile = async (uid, data) => {
   await setDoc(doc(db, 'volunteers', uid), { ...data, profileComplete: true, updatedAt: new Date() })
+}
+
+export const joinTask = async (uid, task, zone) => {
+  await setDoc(doc(db, 'volunteers', uid, 'activeTasks', String(task.id)), {
+    taskId: task.id,
+    taskTitle: task.title,
+    zoneId: zone.id,
+    zoneName: zone.name,
+    joinedAt: new Date(),
+    duration: task.duration,
+  })
 }

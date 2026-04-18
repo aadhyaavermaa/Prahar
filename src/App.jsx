@@ -9,18 +9,21 @@ import Signup from './pages/Signup'
 import Onboarding from './pages/volunteer/Onboarding'
 import VolunteerDashboard from './pages/volunteer/Dashboard'
 import NgoDashboard from './pages/ngo/Dashboard'
+import TaskMapPage from './pages/TaskMapPage'
+import ImpactShowcase from './pages/ImpactShowcase'
 import './index.css'
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public routes — with header/footer */}
         <Route path="/" element={<WithLayout><Landing /></WithLayout>} />
         <Route path="/login" element={<WithLayout><Login /></WithLayout>} />
         <Route path="/signup" element={<WithLayout><Signup /></WithLayout>} />
 
-        {/* Protected volunteer routes — no header/footer (full-page dashboard) */}
+        <Route path="/map" element={<WithLayout><TaskMapPage /></WithLayout>} />
+        <Route path="/impact" element={<WithLayout><ImpactShowcase /></WithLayout>} />
+
         <Route path="/volunteer/onboarding" element={
           <ProtectedRoute allowedRoles={['volunteer']}>
             <Onboarding />
@@ -32,7 +35,6 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* Protected NGO routes */}
         <Route path="/ngo/dashboard" element={
           <ProtectedRoute allowedRoles={['ngo']}>
             <NgoDashboard />
@@ -43,7 +45,6 @@ function App() {
   )
 }
 
-// Wraps public pages with the shared header + footer
 const WithLayout = ({ children }) => (
   <div className="App">
     <Header />
