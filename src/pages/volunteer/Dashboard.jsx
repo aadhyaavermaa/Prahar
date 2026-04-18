@@ -1,263 +1,347 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
-import { auth } from '../../firebase'
-import { useAuth } from '../../context/AuthContext'
+import { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase";
 
-// Mock data — replace with Firestore queries later
-const MOCK_TASKS = [
-  { id: 1, title: 'Tree Plantation Drive', ngo: 'Green Earth Foundation', location: 'Sector 21, Delhi', date: 'Apr 20, 2026', status: 'active', priority: 'high', points: 150, category: 'Environment' },
-  { id: 2, title: 'Teach Basic Computer Skills', ngo: 'Digital India NGO', location: 'Rohini, Delhi', date: 'Apr 22, 2026', status: 'active', priority: 'medium', points: 100, category: 'Education' },
-  { id: 3, title: 'Blood Donation Camp Setup', ngo: 'LifeSave Trust', location: 'Dwarka, Delhi', date: 'Apr 18, 2026', status: 'completed', priority: 'high', points: 200, category: 'Healthcare' },
-  { id: 4, title: 'Women Safety Workshop', ngo: 'Shakti Foundation', location: 'Lajpat Nagar', date: 'Apr 15, 2026', status: 'completed', priority: 'medium', points: 120, category: 'Women Empowerment' },
-  { id: 5, title: 'River Cleanup Campaign', ngo: 'Clean Rivers India', location: 'Yamuna Bank', date: 'May 1, 2026', status: 'upcoming', priority: 'high', points: 180, category: 'Environment' },
-]
+const BASE = "http://localhost:8000";
 
-const MOCK_ACTIVITY = [
-  { id: 1, text: 'Completed Blood Donation Camp Setup', time: '2 days ago', icon: '✅' },
-  { id: 2, text: 'Earned "Healthcare Hero" badge', time: '2 days ago', icon: '🏅' },
-  { id: 3, text: 'Joined Women Safety Workshop', time: '4 days ago', icon: '📋' },
-  { id: 4, text: 'Reached 500 points milestone', time: '1 week ago', icon: '🎯' },
-  { id: 5, text: 'Profile verified by LifeSave Trust', time: '1 week ago', icon: '✔️' },
-]
+// ── Skill badge colors ────────────────────────────────────────────────────────
+const SKILL_COLORS = [
+  "bg-teal-100 text-teal-700", "bg-blue-100 text-blue-700",
+  "bg-purple-100 text-purple-700", "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700", "bg-green-100 text-green-700",
+];
+const skillColor = (i) => SKILL_COLORS[i % SKILL_COLORS.length];
 
-const BADGES = [
-  { icon: '🌱', label: 'First Step', earned: true },
-  { icon: '🌿', label: 'Eco Warrior', earned: true },
-  { icon: '🏅', label: 'Healthcare Hero', earned: true },
-  { icon: '📚', label: 'Educator', earned: false },
-  { icon: '🔥', label: '10 Tasks', earned: false },
-  { icon: '⭐', label: 'Top Volunteer', earned: false },
-]
+const PRIORITY_STYLE = {
+  critical: "bg-red-100 text-red-700",
+  high: "bg-orange-100 text-orange-700",
+  medium: "bg-yellow-100 text-yellow-700",
+  low: "bg-green-100 text-green-700",
+};
 
-const STATUS_STYLES = {
-  active:    { bg: '#fef3c7', color: '#d97706', label: 'Active' },
-  completed: { bg: '#d1fae5', color: '#059669', label: 'Completed' },
-  upcoming:  { bg: '#ede9fe', color: '#7c3aed', label: 'Upcoming' },
-}
+// ── Task Card ─────────────────────────────────────────────────────────────────
+function TaskCard({ task, volunteerId, onAccepted }) {
+  const [score, setScore] = useState(null);
+  const [loadingScore, setLoadingScore] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [accepted, setAccepted] = useState(
+    task.volunteers_assigned?.includes(volunteerId)
+  );
 
-const PRIORITY_DOT = {
-  high:   '#ef4444',
-  medium: '#f59e0b',
-  low:    '#10b981',
-}
+  // Fetch Gemini match score
+  useEffect(() => {
+    if (!volunteerId) return;
+    setLoadingScore(true);
+    fetch(`${BASE}/api/match?volunteer_id=${volunteerId}&task_id=${task.id}`)
+      .then((r) => r.json())
+      .then((d) => setScore(d.score ?? d.match_score ?? null))
+      .catch(() => setScore(null))
+      .finally(() => setLoadingScore(false));
+  }, [task.id, volunteerId]);
 
-const VolunteerDashboard = () => {
-  const { user, userProfile } = useAuth()
-  const devUser = user || { email: 'preview@dev.com' }
-  const devProfile = userProfile || {}
-  const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('active')
-
-  const handleLogout = async () => {
-    await signOut(auth)
-    navigate('/login')
-  }
-
-  const displayName = devProfile?.firstName || devUser?.displayName || 'Arjun'
-  const totalPoints = 620
-  const level = Math.floor(totalPoints / 200) + 1
-  const nextLevelPoints = level * 200
-  const progress = ((totalPoints % 200) / 200) * 100
-
-  const filteredTasks = MOCK_TASKS.filter(t =>
-    activeTab === 'all' ? true : t.status === activeTab
-  )
+  const accept = async () => {
+    if (accepted || accepting) return;
+    setAccepting(true);
+    try {
+      await fetch(
+        `${BASE}/api/tasks/${task.id}/assign?volunteer_id=${volunteerId}`,
+        { method: "POST" }
+      );
+      setAccepted(true);
+      onAccepted && onAccepted(task.id);
+    } catch (e) {
+      console.error("Accept failed", e);
+    } finally {
+      setAccepting(false);
+    }
+  };
 
   return (
-    <div className="vdash-page">
-      {/* Topbar */}
-      <div className="vdash-topbar">
-        <div className="vdash-logo">🌿 Prahar</div>
-        <div className="vdash-topbar-right">
-          <span className="vdash-email">{devUser?.email}</span>
-          <button className="btn btn-outline btn-sm" onClick={handleLogout}>Logout</button>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="px-5 py-4">
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h3 className="font-bold text-gray-900 leading-tight">{task.title}</h3>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_STYLE[task.priority] || "bg-gray-100 text-gray-600"}`}>
+              {task.priority}
+            </span>
+          </div>
+        </div>
+
+        {/* Meta */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mb-3">
+          <span>📍 {task.zone_name}</span>
+          <span>📅 {task.date}</span>
+          <span>👥 {task.volunteers_assigned?.length ?? 0}/{task.volunteers_needed}</span>
+          <span className="text-amber-600 font-semibold">+{task.points_reward} pts</span>
+        </div>
+
+        {/* Description */}
+        {task.description && (
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
+        )}
+
+        {/* Skills */}
+        {task.skills_needed?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {task.skills_needed.map((s, i) => (
+              <span key={s} className={`px-2 py-0.5 rounded-full text-xs font-medium ${skillColor(i)}`}>{s}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer row */}
+        <div className="flex items-center justify-between gap-3">
+          {/* AI Match Score */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">AI Match:</span>
+            {loadingScore ? (
+              <span className="text-xs text-gray-300 animate-pulse">…</span>
+            ) : score !== null ? (
+              <div className="flex items-center gap-1">
+                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-teal-500 rounded-full" style={{ width: `${score}%` }} />
+                </div>
+                <span className="text-xs font-bold text-teal-600">{score}%</span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-300">—</span>
+            )}
+          </div>
+
+          {/* Accept Button */}
+          <button
+            onClick={accept}
+            disabled={accepted || accepting || task.status === "completed"}
+            className={`px-4 py-1.5 rounded-xl text-sm font-semibold transition-all ${
+              accepted
+                ? "bg-green-100 text-green-700 cursor-default"
+                : accepting
+                ? "bg-teal-100 text-teal-500 cursor-wait"
+                : task.status === "completed"
+                ? "bg-gray-100 text-gray-400 cursor-default"
+                : "bg-teal-600 text-white hover:bg-teal-700 shadow-sm"
+            }`}>
+            {accepted ? "✓ Accepted" : accepting ? "Joining…" : "Accept Task"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function Sidebar({ profile, onLogout }) {
+  const badges = profile?.badges || [];
+  const points = profile?.points || 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Profile Card */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-5 text-center">
+        <div className="w-16 h-16 rounded-full bg-teal-600 text-white text-2xl font-black flex items-center justify-center mx-auto mb-3">
+          {profile?.fullName?.[0] || "V"}
+        </div>
+        <h2 className="font-bold text-gray-900">{profile?.fullName || "Volunteer"}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">{profile?.location || "Delhi"}</p>
+        <div className="mt-3 flex justify-center gap-2 flex-wrap">
+          {(profile?.causes || []).slice(0, 3).map((c) => (
+            <span key={c} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">{c}</span>
+          ))}
         </div>
       </div>
 
-      <div className="vdash-layout">
-        {/* ── Left Sidebar ── */}
-        <aside className="vdash-sidebar">
-          {/* Profile card */}
-          <div className="vdash-profile-card">
-            <div className="vdash-avatar">{displayName[0].toUpperCase()}</div>
-            <div className="vdash-profile-name">{displayName}</div>
-            <div className="vdash-profile-role">Volunteer</div>
-            <div className="vdash-profile-location">📍 Delhi, India</div>
-
-            <div className="vdash-level-row">
-              <span className="vdash-level-badge">Level {level}</span>
-              <span className="vdash-points-text">{totalPoints} pts</span>
-            </div>
-            <div className="vdash-progress-bar">
-              <div className="vdash-progress-fill" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="vdash-progress-label">{totalPoints % 200} / 200 pts to Level {level + 1}</div>
-          </div>
-
-          {/* Stats */}
-          <div className="vdash-sidebar-stats">
-            <div className="vdash-sstat">
-              <div className="vdash-sstat-val">5</div>
-              <div className="vdash-sstat-lbl">Tasks Done</div>
-            </div>
-            <div className="vdash-sstat">
-              <div className="vdash-sstat-val">32</div>
-              <div className="vdash-sstat-lbl">Hours</div>
-            </div>
-            <div className="vdash-sstat">
-              <div className="vdash-sstat-val">3</div>
-              <div className="vdash-sstat-lbl">NGOs</div>
-            </div>
-          </div>
-
-          {/* Badges */}
-          <div className="vdash-section">
-            <div className="vdash-section-title">Badges</div>
-            <div className="vdash-badges">
-              {BADGES.map(b => (
-                <div key={b.label} className={`vdash-badge ${b.earned ? 'earned' : 'locked'}`} title={b.label}>
-                  <span>{b.icon}</span>
-                  <span className="vdash-badge-label">{b.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Skills */}
-          <div className="vdash-section">
-            <div className="vdash-section-title">Skills</div>
-            <div className="vdash-skills">
-              {['Teaching', 'Environment', 'Healthcare', 'IT'].map(s => (
-                <span key={s} className="vdash-skill-tag">{s}</span>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main Content ── */}
-        <main className="vdash-main">
-          {/* Welcome */}
-          <div className="vdash-welcome">
-            <div>
-              <h1>Welcome back, {displayName} 👋</h1>
-              <p>You have <strong>{MOCK_TASKS.filter(t => t.status === 'active').length} active tasks</strong> and <strong>1 upcoming</strong> this week.</p>
-            </div>
-            <button className="btn btn-primary btn-sm" disabled>+ Find Opportunities</button>
-          </div>
-
-          {/* Point summary cards */}
-          <div className="vdash-cards">
-            <div className="vdash-card vdash-card--green">
-              <div className="vdash-card-icon">🏆</div>
-              <div className="vdash-card-val">{totalPoints}</div>
-              <div className="vdash-card-lbl">Total Points</div>
-            </div>
-            <div className="vdash-card vdash-card--blue">
-              <div className="vdash-card-icon">✅</div>
-              <div className="vdash-card-val">2</div>
-              <div className="vdash-card-lbl">Completed Tasks</div>
-            </div>
-            <div className="vdash-card vdash-card--purple">
-              <div className="vdash-card-icon">📋</div>
-              <div className="vdash-card-val">2</div>
-              <div className="vdash-card-lbl">Active Tasks</div>
-            </div>
-            <div className="vdash-card vdash-card--orange">
-              <div className="vdash-card-icon">⏰</div>
-              <div className="vdash-card-val">32h</div>
-              <div className="vdash-card-lbl">Hours Logged</div>
-            </div>
-          </div>
-
-          {/* Tasks */}
-          <div className="vdash-tasks-section">
-            <div className="vdash-tasks-header">
-              <div className="vdash-section-title" style={{marginBottom:0}}>My Tasks</div>
-              <div className="vdash-tabs">
-                {['active', 'upcoming', 'completed', 'all'].map(tab => (
-                  <button key={tab} className={`vdash-tab ${activeTab === tab ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab)}>
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="vdash-task-list">
-              {filteredTasks.length === 0 && (
-                <div className="vdash-empty">No tasks here yet.</div>
-              )}
-              {filteredTasks.map(task => {
-                const s = STATUS_STYLES[task.status]
-                return (
-                  <div key={task.id} className="vdash-task-card">
-                    <div className="vdash-task-left">
-                      <div className="vdash-task-top">
-                        <span className="vdash-priority-dot" style={{ background: PRIORITY_DOT[task.priority] }} />
-                        <span className="vdash-task-title">{task.title}</span>
-                        <span className="vdash-status-pill" style={{ background: s.bg, color: s.color }}>{s.label}</span>
-                      </div>
-                      <div className="vdash-task-meta">
-                        <span>🏢 {task.ngo}</span>
-                        <span>📍 {task.location}</span>
-                        <span>📅 {task.date}</span>
-                        <span className="vdash-category-tag">{task.category}</span>
-                      </div>
-                    </div>
-                    <div className="vdash-task-right">
-                      <div className="vdash-task-points">+{task.points} pts</div>
-                      {task.status === 'active' && (
-                        <button className="btn btn-primary btn-sm" disabled>View Details</button>
-                      )}
-                      {task.status === 'completed' && (
-                        <button className="btn btn-outline btn-sm" disabled>View Report</button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </main>
-
-        {/* ── Right Sidebar ── */}
-        <aside className="vdash-right">
-          {/* Leaderboard */}
-          <div className="vdash-section vdash-widget">
-            <div className="vdash-section-title">🏅 Leaderboard</div>
-            {[
-              { rank: 1, name: 'Priya S.', pts: 980 },
-              { rank: 2, name: 'Rahul M.', pts: 860 },
-              { rank: 3, name: displayName, pts: totalPoints, isYou: true },
-              { rank: 4, name: 'Sneha K.', pts: 540 },
-              { rank: 5, name: 'Amit R.', pts: 490 },
-            ].map(entry => (
-              <div key={entry.rank} className={`vdash-lb-row ${entry.isYou ? 'you' : ''}`}>
-                <span className="vdash-lb-rank">#{entry.rank}</span>
-                <span className="vdash-lb-name">{entry.name}{entry.isYou ? ' (You)' : ''}</span>
-                <span className="vdash-lb-pts">{entry.pts} pts</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Activity feed */}
-          <div className="vdash-section vdash-widget">
-            <div className="vdash-section-title">📰 Recent Activity</div>
-            {MOCK_ACTIVITY.map(a => (
-              <div key={a.id} className="vdash-activity-row">
-                <span className="vdash-activity-icon">{a.icon}</span>
-                <div>
-                  <div className="vdash-activity-text">{a.text}</div>
-                  <div className="vdash-activity-time">{a.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+      {/* Points */}
+      <div className="bg-gradient-to-br from-teal-600 to-cyan-500 rounded-2xl px-5 py-4 text-white shadow-lg">
+        <p className="text-xs font-semibold opacity-70 uppercase tracking-wide">Your Points</p>
+        <p className="text-4xl font-black mt-1">{points}</p>
+        <p className="text-xs opacity-60 mt-1">Keep going! 🌱</p>
       </div>
+
+      {/* Badges */}
+      {badges.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Badges Earned</h3>
+          <div className="flex flex-wrap gap-2">
+            {badges.map((b) => (
+              <span key={b} className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded-full font-semibold">
+                🏅 {b}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Skills */}
+      {profile?.skills?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Your Skills</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {profile.skills.map((s, i) => (
+              <span key={s} className={`text-xs px-2 py-0.5 rounded-full font-medium ${skillColor(i)}`}>{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard mini */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">🏆 Top Volunteers</h3>
+        {["Priya S. — 980 pts", "Rahul M. — 860 pts", "Sneha K. — 740 pts"].map((e, i) => (
+          <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
+            <span className="text-sm">{["🥇","🥈","🥉"][i]}</span>
+            <span className="text-sm text-gray-700">{e}</span>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={onLogout}
+        className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all font-medium">
+        Logout
+      </button>
     </div>
-  )
+  );
 }
 
-export default VolunteerDashboard
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+export default function VolunteerDashboard() {
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const [tasks, setTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [filter, setFilter] = useState("all");
+
+  // Redirect non-volunteers
+  useEffect(() => {
+    if (!authLoading && userProfile && userProfile.role !== "volunteer") navigate("/");
+  }, [authLoading, userProfile, navigate]);
+
+  // Load Firestore volunteer profile
+  useEffect(() => {
+    if (!user) return;
+    getDoc(doc(db, "volunteers", user.uid))
+      .then((snap) => { if (snap.exists()) setProfile(snap.data()); })
+      .catch(() => {});
+  }, [user]);
+
+  // Load tasks from API
+  useEffect(() => {
+    setLoadingTasks(true);
+    fetch(`${BASE}/api/tasks`)
+      .then((r) => r.json())
+      .then((data) => setTasks(Array.isArray(data) ? data : []))
+      .catch(() => setTasks([]))
+      .finally(() => setLoadingTasks(false));
+  }, []);
+
+  const logout = async () => {
+    const { getAuth, signOut } = await import("firebase/auth");
+    await signOut(getAuth());
+    navigate("/login");
+  };
+
+  const filtered = tasks.filter((t) => {
+    if (filter === "all") return true;
+    if (filter === "open") return t.status === "open";
+    if (filter === "mine") return t.volunteers_assigned?.includes(user?.uid);
+    return true;
+  });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f8fafb]">
+
+      {/* Topbar */}
+      <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+        <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-gray-700">
+            {profile?.fullName || userProfile?.firstName || "Volunteer"}
+          </span>
+          <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-semibold">
+            {profile?.points ?? 0} pts
+          </span>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+
+          {/* Sidebar */}
+          <div className="lg:w-72 shrink-0">
+            <Sidebar profile={profile} onLogout={logout} />
+          </div>
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0 space-y-5">
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Open Tasks", value: tasks.filter((t) => t.status === "open").length, icon: "📋" },
+                { label: "My Tasks", value: tasks.filter((t) => t.volunteers_assigned?.includes(user?.uid)).length, icon: "✅" },
+                { label: "My Points", value: profile?.points ?? 0, icon: "⭐" },
+              ].map((s) => (
+                <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 text-center">
+                  <div className="text-xl mb-0.5">{s.icon}</div>
+                  <div className="text-xl font-black text-teal-600">{s.value}</div>
+                  <div className="text-xs text-gray-500">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter tabs */}
+            <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 shadow-sm w-fit">
+              {[["all", "All Tasks"], ["open", "Open"], ["mine", "My Tasks"]].map(([v, l]) => (
+                <button key={v} onClick={() => setFilter(v)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    filter === v ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
+                  }`}>{l}</button>
+              ))}
+            </div>
+
+            {/* Tasks */}
+            {loadingTasks ? (
+              <div className="text-center py-12 text-gray-400 animate-pulse">Loading tasks…</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+                <p className="text-gray-400 text-sm">No tasks found.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    volunteerId={user?.uid}
+                    onAccepted={() => {
+                      setTasks((prev) =>
+                        prev.map((x) =>
+                          x.id === t.id
+                            ? { ...x, volunteers_assigned: [...(x.volunteers_assigned || []), user.uid] }
+                            : x
+                        )
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
