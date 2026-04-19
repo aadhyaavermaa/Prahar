@@ -265,7 +265,10 @@ export default function VolunteerDashboard() {
 
       {/* Topbar */}
       <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
-        <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>← Back</button>
+          <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-700">
             {profile?.fullName || userProfile?.firstName || "Volunteer"}

@@ -22,7 +22,7 @@ function App() {
         <Route path="/login" element={<WithLayout><Login /></WithLayout>} />
         <Route path="/signup" element={<WithLayout><Signup /></WithLayout>} />
 
-        <Route path="/map" element={<WithLayout><TaskMapPage /></WithLayout>} />
+        <Route path="/map" element={<TaskMapPage />} />
         <Route path="/impact" element={<WithLayout><ImpactShowcase /></WithLayout>} />
         <Route path="/leaderboard" element={<WithLayout><Leaderboard /></WithLayout>} />
 

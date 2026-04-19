@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const VOLUNTEERS = [
   { rank: 1, name: "Priya S.", points: 980, badge: "River Guardian", avatar: "P", streak: 12, tasks: 24 },
@@ -128,6 +128,7 @@ function NgoRow({ n }) {
 
 export default function Leaderboard() {
   const [tab, setTab] = useState("volunteers");
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#f8fafb]">

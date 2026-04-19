@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ImpactNewspaper from '../components/ImpactNewspaper'
 
 // ─── Demo Data ────────────────────────────────────────────────────────────────
@@ -248,7 +249,7 @@ function ImpactCard({ card, index, onClick }) {
         transitionDelay: `${index * 80}ms`,
         transitionProperty: 'opacity, transform, box-shadow',
         breakInside: 'avoid',
-        marginBottom: 20,
+        marginBottom: 16,
         position: 'relative',
       }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.13)' }}
@@ -529,6 +530,7 @@ function UploadModal({ onClose, onAdd }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ImpactShowcase() {
+  const navigate = useNavigate()
   const [cards, setCards] = useState(DEMO_CARDS)
   const [selectedCard, setSelectedCard] = useState(null)
   const [showUpload, setShowUpload] = useState(false)
@@ -557,9 +559,11 @@ export default function ImpactShowcase() {
 
           <div style={{ maxWidth: 1100, margin: '0 auto' }}>
             {/* Badge */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 99, padding: '5px 14px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 99, padding: '5px 14px' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'glow-dot 1.5s ease-in-out infinite' }} />
               <span style={{ color: '#6ee7b7', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Week of Apr 14–20, 2026</span>
+            </div>
             </div>
 
             <h1 style={{ color: 'white', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, margin: '0 0 12px', lineHeight: 1.15 }}>
@@ -645,7 +649,7 @@ export default function ImpactShowcase() {
             columns: 'auto 320px', columnGap: 20,
           }}>
             {filtered.map((card, i) => (
-              <div key={card.id} style={{ breakInside: 'avoid' }}>
+              <div key={card.id} style={{ breakInside: 'avoid', marginBottom: 0 }}>
                 <ImpactCard card={card} index={i} onClick={setSelectedCard} />
               </div>
             ))}

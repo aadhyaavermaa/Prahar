@@ -1,6 +1,8 @@
 import TaskMap from '../components/TaskMap'
+import { useNavigate } from 'react-router-dom'
 
 export default function TaskMapPage() {
+  const navigate = useNavigate()
   return (
     <div style={{
       height: '100vh',
@@ -21,6 +23,10 @@ export default function TaskMapPage() {
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', padding: '6px 12px', fontSize: 13, fontWeight: 600 }}
+          >← Back</button>
           <span style={{ fontSize: 24 }}>🛰️</span>
           <div>
             <h1 style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0, lineHeight: 1.2 }}>

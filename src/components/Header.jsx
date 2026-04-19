@@ -1,18 +1,38 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const showBack = location.pathname !== '/'
 
   return (
     <header className="header">
       <nav className="navbar">
         <div className="nav-container">
-          <Link to="/" className="nav-logo">
-            <span className="logo-text">Prahar</span>
-            <span className="logo-tagline">Environmental Intelligence</span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {showBack && (
+              <button
+                onClick={() => navigate(-1)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  background: 'transparent', border: '1.5px solid #10b981',
+                  borderRadius: '8px', color: '#10b981', cursor: 'pointer',
+                  padding: '4px 12px', fontSize: '13px', fontWeight: '600',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = 'white' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#10b981' }}
+              >
+                ← Back
+              </button>
+            )}
+            <Link to="/" className="nav-logo">
+              <span className="logo-text">Prahar</span>
+              <span className="logo-tagline">Environmental Intelligence</span>
+            </Link>
+          </div>
 
           <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
             <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>

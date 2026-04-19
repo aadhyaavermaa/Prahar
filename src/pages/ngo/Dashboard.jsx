@@ -370,6 +370,7 @@ export default function NgoDashboard() {
         {/* ── Topbar ── */}
         <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>← Back</button>
             <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
             <span className="hidden sm:block text-xs text-gray-400 font-medium border-l border-gray-200 pl-3">NGO Command Centre</span>
           </div>
