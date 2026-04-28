@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth, signInWithGoogle, createUserProfile } from '../firebase'
 import { getRedirectPath } from '../hooks/usePostAuthRedirect'
+import { useLang } from '../context/LanguageContext'
 
 const ROLES = {
   VOLUNTEER_ASSOCIATED: 'volunteer_associated',
@@ -30,6 +31,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const cardRef = useRef(null)
+  const { t, lang } = useLang()
 
   // Scale card to fit viewport without scrolling
   useEffect(() => {
@@ -150,56 +152,56 @@ const Signup = () => {
       <div className="auth-container auth-container--wide">
         <div className="auth-card" ref={cardRef}>
           <div className="auth-header">
-            <h1>Join Prahar</h1>
-            <p>Create your account to start making an impact</p>
+            <h1>{t('joinPrahar')}</h1>
+            <p>{t('createAccount')}</p>
           </div>
 
           <div className="role-cards">
             <button type="button" className={`role-card ${role === ROLES.VOLUNTEER_ASSOCIATED ? 'active' : ''}`}
               onClick={() => setRole(ROLES.VOLUNTEER_ASSOCIATED)}>
               <span className="role-card-icon">🤝</span>
-              <span className="role-card-title">Volunteer</span>
-              <span className="role-card-sub">Already with an NGO</span>
+              <span className="role-card-title">{t('volunteerAssociated')}</span>
+              <span className="role-card-sub">{t('volunteerAssociatedSub')}</span>
             </button>
             <button type="button" className={`role-card ${role === ROLES.VOLUNTEER_NEW ? 'active' : ''}`}
               onClick={() => setRole(ROLES.VOLUNTEER_NEW)}>
               <span className="role-card-icon">🌱</span>
-              <span className="role-card-title">Volunteer</span>
-              <span className="role-card-sub">Looking for opportunities</span>
+              <span className="role-card-title">{t('volunteerNew')}</span>
+              <span className="role-card-sub">{t('volunteerNewSub')}</span>
             </button>
             <button type="button" className={`role-card ${role === ROLES.NGO ? 'active' : ''}`}
               onClick={() => setRole(ROLES.NGO)}>
               <span className="role-card-icon">🏢</span>
-              <span className="role-card-title">NGO</span>
-              <span className="role-card-sub">Representative</span>
+              <span className="role-card-title">{t('ngo')}</span>
+              <span className="role-card-sub">{t('ngoSub')}</span>
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="firstName">First Name</label>
+                <label htmlFor="firstName">{t('firstName')}</label>
                 <input type="text" id="firstName" name="firstName" value={formData.firstName}
-                  onChange={handleChange} className={`form-control ${errors.firstName ? 'error' : ''}`} placeholder="First name" />
+                  onChange={handleChange} className={`form-control ${errors.firstName ? 'error' : ''}`} placeholder={lang==='hi'?'पहला नाम':'First name'} />
                 {errors.firstName && <span className="error-message">{errors.firstName}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="lastName">Last Name</label>
+                <label htmlFor="lastName">{t('lastName')}</label>
                 <input type="text" id="lastName" name="lastName" value={formData.lastName}
-                  onChange={handleChange} className={`form-control ${errors.lastName ? 'error' : ''}`} placeholder="Last name" />
+                  onChange={handleChange} className={`form-control ${errors.lastName ? 'error' : ''}`} placeholder={lang==='hi'?'अंतिम नाम':'Last name'} />
                 {errors.lastName && <span className="error-message">{errors.lastName}</span>}
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="email">{t('emailAddress')}</label>
                 <input type="email" id="email" name="email" value={formData.email}
                   onChange={handleChange} className={`form-control ${errors.email ? 'error' : ''}`} placeholder="your@email.com" />
                 {errors.email && <span className="error-message">{errors.email}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="contactNo">Contact Number</label>
+                <label htmlFor="contactNo">{t('contactNo')}</label>
                 <input type="tel" id="contactNo" name="contactNo" value={formData.contactNo}
                   onChange={handleChange} className={`form-control ${errors.contactNo ? 'error' : ''}`} placeholder="+91 XXXXX XXXXX" />
                 {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
@@ -209,15 +211,15 @@ const Signup = () => {
             {role === ROLES.VOLUNTEER_ASSOCIATED && (
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="ngoAssociated">NGO Name</label>
+                  <label htmlFor="ngoAssociated">{t('ngoName')}</label>
                   <input type="text" id="ngoAssociated" name="ngoAssociated" value={formData.ngoAssociated}
-                    onChange={handleChange} className={`form-control ${errors.ngoAssociated ? 'error' : ''}`} placeholder="Name of your NGO" />
+                    onChange={handleChange} className={`form-control ${errors.ngoAssociated ? 'error' : ''}`} placeholder={lang==='hi'?'आपके NGO का नाम':'Name of your NGO'} />
                   {errors.ngoAssociated && <span className="error-message">{errors.ngoAssociated}</span>}
                 </div>
                 <div className="form-group">
-                  <label htmlFor="volunteerRole">Your Role in NGO</label>
+                  <label htmlFor="volunteerRole">{t('yourRole')}</label>
                   <input type="text" id="volunteerRole" name="volunteerRole" value={formData.volunteerRole}
-                    onChange={handleChange} className={`form-control ${errors.volunteerRole ? 'error' : ''}`} placeholder="e.g. Field Coordinator" />
+                    onChange={handleChange} className={`form-control ${errors.volunteerRole ? 'error' : ''}`} placeholder={lang==='hi'?'जैसे: फील्ड कोऑर्डिनेटर':'e.g. Field Coordinator'} />
                   {errors.volunteerRole && <span className="error-message">{errors.volunteerRole}</span>}
                 </div>
               </div>
@@ -226,20 +228,20 @@ const Signup = () => {
             {role === ROLES.VOLUNTEER_NEW && (
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="skills">Skills / Interests</label>
+                  <label htmlFor="skills">{t('skills')}</label>
                   <input type="text" id="skills" name="skills" value={formData.skills}
-                    onChange={handleChange} className={`form-control ${errors.skills ? 'error' : ''}`} placeholder="e.g. Teaching, Medical, IT" />
+                    onChange={handleChange} className={`form-control ${errors.skills ? 'error' : ''}`} placeholder={lang==='hi'?'जैसे: शिक्षण, चिकित्सा, IT':'e.g. Teaching, Medical, IT'} />
                   {errors.skills && <span className="error-message">{errors.skills}</span>}
                 </div>
                 <div className="form-group">
-                  <label htmlFor="availability">Availability</label>
+                  <label htmlFor="availability">{t('availability')}</label>
                   <select id="availability" name="availability" value={formData.availability}
                     onChange={handleChange} className={`form-control ${errors.availability ? 'error' : ''}`}>
-                    <option value="">Select availability</option>
-                    <option value="weekends">Weekends only</option>
-                    <option value="weekdays">Weekdays only</option>
-                    <option value="fulltime">Full-time</option>
-                    <option value="flexible">Flexible</option>
+                    <option value="">{lang==='hi'?'उपलब्धता चुनें':'Select availability'}</option>
+                    <option value="weekends">{lang==='hi'?'केवल सप्ताहांत':'Weekends only'}</option>
+                    <option value="weekdays">{lang==='hi'?'केवल सप्ताह के दिन':'Weekdays only'}</option>
+                    <option value="fulltime">{lang==='hi'?'पूर्णकालिक':'Full-time'}</option>
+                    <option value="flexible">{lang==='hi'?'लचीला':'Flexible'}</option>
                   </select>
                   {errors.availability && <span className="error-message">{errors.availability}</span>}
                 </div>
@@ -250,27 +252,27 @@ const Signup = () => {
               <>
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="ngoName">NGO Name</label>
+                    <label htmlFor="ngoName">{t('ngoName')}</label>
                     <input type="text" id="ngoName" name="ngoName" value={formData.ngoName}
-                      onChange={handleChange} className={`form-control ${errors.ngoName ? 'error' : ''}`} placeholder="Official NGO name" />
+                      onChange={handleChange} className={`form-control ${errors.ngoName ? 'error' : ''}`} placeholder={lang==='hi'?'आधिकारिक NGO नाम':'Official NGO name'} />
                     {errors.ngoName && <span className="error-message">{errors.ngoName}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="ngoRegNumber">Registration Number</label>
+                    <label htmlFor="ngoRegNumber">{t('regNumber')}</label>
                     <input type="text" id="ngoRegNumber" name="ngoRegNumber" value={formData.ngoRegNumber}
-                      onChange={handleChange} className={`form-control ${errors.ngoRegNumber ? 'error' : ''}`} placeholder="NGO registration no." />
+                      onChange={handleChange} className={`form-control ${errors.ngoRegNumber ? 'error' : ''}`} placeholder={lang==='hi'?'NGO पंजीकरण नं.':'NGO registration no.'} />
                     {errors.ngoRegNumber && <span className="error-message">{errors.ngoRegNumber}</span>}
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="designation">Your Designation</label>
+                    <label htmlFor="designation">{t('designation')}</label>
                     <input type="text" id="designation" name="designation" value={formData.designation}
-                      onChange={handleChange} className={`form-control ${errors.designation ? 'error' : ''}`} placeholder="e.g. Director, Manager" />
+                      onChange={handleChange} className={`form-control ${errors.designation ? 'error' : ''}`} placeholder={lang==='hi'?'जैसे: निदेशक, प्रबंधक':'e.g. Director, Manager'} />
                     {errors.designation && <span className="error-message">{errors.designation}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="ngoWebsite">NGO Website <span style={{color:'#9ca3af',fontWeight:400}}>(optional)</span></label>
+                    <label htmlFor="ngoWebsite">{t('ngoWebsite')} <span style={{color:'#9ca3af',fontWeight:400}}>({lang==='hi'?'वैकल्पिक':'optional'})</span></label>
                     <input type="url" id="ngoWebsite" name="ngoWebsite" value={formData.ngoWebsite}
                       onChange={handleChange} className="form-control" placeholder="https://yourngo.org" />
                   </div>
@@ -280,15 +282,15 @@ const Signup = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">{t('password')}</label>
                 <input type="password" id="password" name="password" value={formData.password}
-                  onChange={handleChange} className={`form-control ${errors.password ? 'error' : ''}`} placeholder="Min. 8 characters" />
+                  onChange={handleChange} className={`form-control ${errors.password ? 'error' : ''}`} placeholder={lang==='hi'?'न्यूनतम 8 अक्षर':'Min. 8 characters'} />
                 {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="confirmPassword">Confirm Password</label>
+                <label htmlFor="confirmPassword">{t('confirmPassword')}</label>
                 <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword}
-                  onChange={handleChange} className={`form-control ${errors.confirmPassword ? 'error' : ''}`} placeholder="Repeat password" />
+                  onChange={handleChange} className={`form-control ${errors.confirmPassword ? 'error' : ''}`} placeholder={lang==='hi'?'पासवर्ड दोहराएं':'Repeat password'} />
                 {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
               </div>
             </div>
@@ -297,7 +299,7 @@ const Signup = () => {
               <label className="checkbox-label">
                 <input type="checkbox" name="agreeToTerms" checked={formData.agreeToTerms} onChange={handleChange} />
                 <span className="checkmark"></span>
-                I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+                {t('agreeTerms')}
               </label>
               {errors.agreeToTerms && <span className="error-message">{errors.agreeToTerms}</span>}
             </div>
@@ -305,11 +307,11 @@ const Signup = () => {
             {errors.submit && <span className="error-message" style={{display:'block',marginBottom:'1rem'}}>{errors.submit}</span>}
 
             <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? t('creatingAccount') : t('createAccountBtn')}
             </button>
           </form>
 
-          <div className="auth-divider"><span>OR</span></div>
+          <div className="auth-divider"><span>{t('orDivider')}</span></div>
 
           <div className="social-auth">
             <button type="button" className="btn btn-social btn-google btn-full" onClick={handleGoogleSignIn} disabled={loading}>
@@ -319,13 +321,13 @@ const Signup = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              {t('continueGoogle')}
             </button>
             {googleError && <span className="error-message" style={{display:'block',textAlign:'center',marginTop:'0.5rem'}}>{googleError}</span>}
           </div>
 
           <div className="auth-footer">
-            <p>Already have an account? <Link to="/login">Sign in</Link></p>
+            <p>{t('alreadyAccount')} <Link to="/login">{lang==='hi'?'साइन इन करें':'Sign in'}</Link></p>
           </div>
         </div>
       </div>

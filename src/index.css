@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Hide Google Maps billing error popup - all known selectors */
+.gm-err-container,
+.gm-err-content,
+.gm-err-autocomplete,
+div[style*="z-index: 1000000"],
+div[style*="z-index:1000000"],
+div[style*="z-index: 100000"],
+.dismissButton {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 * {
   box-sizing: border-box;
 }

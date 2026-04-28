@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useLang } from "../../context/LanguageContext";
 
 const BASE = "http://localhost:8000";
 
@@ -299,6 +300,7 @@ function RedistributionPanel() {
 export default function NgoDashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLang();
 
   const [zones, setZones] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -372,7 +374,7 @@ export default function NgoDashboard() {
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>← Back</button>
             <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
-            <span className="hidden sm:block text-xs text-gray-400 font-medium border-l border-gray-200 pl-3">NGO Command Centre</span>
+            <span className="hidden sm:block text-xs text-gray-400 font-medium border-l border-gray-200 pl-3">{t('ngoCommandCentre')}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-700">
@@ -381,7 +383,7 @@ export default function NgoDashboard() {
             <span className={`text-xs font-bold ${tier.color}`}>{tier.icon} {tier.label}</span>
             <button onClick={logout}
               className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all">
-              Logout
+              {t('logout')}
             </button>
           </div>
         </header>
@@ -391,10 +393,10 @@ export default function NgoDashboard() {
           {/* ── Stat Cards ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Active Tasks", value: tasks.filter((t) => t.status === "open").length, icon: "📋", color: "text-teal-600" },
-              { label: "Volunteers Assigned", value: totalAssigned, icon: "👥", color: "text-blue-600" },
-              { label: "NGO Points", value: ngoPoints, icon: "⭐", color: "text-amber-500" },
-              { label: "Total Tasks", value: tasks.length, icon: "📊", color: "text-purple-600" },
+              { label: t('activeTasks'), value: tasks.filter((t_) => t_.status === "open").length, icon: "📋", color: "text-teal-600" },
+              { label: t('volunteersAssigned'), value: totalAssigned, icon: "👥", color: "text-blue-600" },
+              { label: t('ngoPoints'), value: ngoPoints, icon: "⭐", color: "text-amber-500" },
+              { label: t('totalTasks'), value: tasks.length, icon: "📊", color: "text-purple-600" },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
                 <div className="text-2xl mb-1">{s.icon}</div>
@@ -407,12 +409,12 @@ export default function NgoDashboard() {
           {/* ── Points Card ── */}
           <div className="bg-gradient-to-r from-teal-600 to-cyan-500 rounded-2xl px-6 py-5 flex items-center justify-between text-white shadow-lg">
             <div>
-              <p className="text-sm font-semibold opacity-80">NGO Impact Score</p>
+              <p className="text-sm font-semibold opacity-80">{t('ngoImpactScore')}</p>
               <p className="text-4xl font-black mt-1">{ngoPoints} pts</p>
               <p className="text-sm mt-1 opacity-75">{tier.icon} {tier.label} tier</p>
             </div>
             <div className="text-right">
-              <p className="text-sm opacity-70">Next tier at</p>
+              <p className="text-sm opacity-70">{t('nextTier')}</p>
               <p className="text-xl font-bold">{ngoPoints < 400 ? "400" : "800"} pts</p>
               <div className="w-32 h-2 bg-white/30 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-white rounded-full transition-all"
@@ -429,14 +431,14 @@ export default function NgoDashboard() {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${
                     activeTab === tab ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
                   }`}>
-                  {tab === "tasks" ? "📋 Tasks" : "🔁 Redistribution"}
+                  {tab === "tasks" ? `📋 ${t('tasks')}` : t('redistribution')}
                 </button>
               ))}
             </div>
             {activeTab === "tasks" && (
               <button onClick={() => setShowModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 shadow transition-all">
-                + Create Task
+                {t('createTask')}
               </button>
             )}
           </div>
@@ -445,10 +447,10 @@ export default function NgoDashboard() {
           {activeTab === "tasks" && (
             <div className="space-y-3">
               {loadingTasks ? (
-                <div className="text-center py-12 text-gray-400 animate-pulse">Loading tasks…</div>
+                <div className="text-center py-12 text-gray-400 animate-pulse">{t('loadingTasks')}</div>
               ) : tasks.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-                  <p className="text-gray-400 text-sm">No tasks yet. Create your first task!</p>
+                  <p className="text-gray-400 text-sm">{t('noTasks')}</p>
                 </div>
               ) : (
                 tasks.map((t) => <TaskCard key={t.id} task={t} />)

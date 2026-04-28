@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase";
+import { useLang } from "../../context/LanguageContext";
 
 const BASE = "http://localhost:8000";
 
@@ -219,6 +220,7 @@ function Sidebar({ profile, level, levelProgress, onLogout }) {
 export default function VolunteerDashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t, lang } = useLang();
 
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
@@ -318,7 +320,7 @@ export default function VolunteerDashboard() {
       {/* Topbar */}
       <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>← Back</button>
+          <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>{t('back')}</button>
           <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
         </div>
         <div className="flex items-center gap-3">
@@ -344,17 +346,17 @@ export default function VolunteerDashboard() {
             <div className="rounded-3xl bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-500 p-6 text-white shadow-xl">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Volunteer dashboard</p>
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">{lang==='hi'?'स्वयंसेवक डैशबोर्ड':'Volunteer dashboard'}</p>
                   <h1 className="mt-3 text-3xl font-black tracking-tight">
-                    Hi {profile?.fullName?.split(" ")[0] || userProfile?.firstName || "Volunteer"}, ready to make impact?
+                    {lang==='hi' ? `नमस्ते ${profile?.fullName?.split(" ")[0] || 'स्वयंसेवक'}, प्रभाव डालने के लिए तैयार हैं?` : `Hi ${profile?.fullName?.split(" ")[0] || userProfile?.firstName || "Volunteer"}, ready to make impact?`}
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm opacity-90">
-                    Use the self-learning matching system to find the best tasks, track your performance, and amplify your local impact.
+                    {lang==='hi' ? 'सर्वोत्तम कार्य खोजने, अपना प्रदर्शन ट्रैक करने और स्थानीय प्रभाव बढ़ाने के लिए स्व-शिक्षण मिलान प्रणाली का उपयोग करें।' : 'Use the self-learning matching system to find the best tasks, track your performance, and amplify your local impact.'}
                   </p>
                 </div>
                 <button onClick={() => navigate("/map")}
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-white px-5 py-2.5 text-sm font-semibold text-teal-700 shadow-sm transition hover:bg-teal-50">
-                  Explore community tasks
+                  {lang==='hi' ? 'सामुदायिक कार्य देखें' : 'Explore community tasks'}
                 </button>
               </div>
 

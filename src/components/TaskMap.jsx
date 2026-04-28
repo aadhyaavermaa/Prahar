@@ -250,7 +250,7 @@ function JoinTaskModal({ zone, onClose, onJoined, activeTask, setActiveTask }) {
       animation: 'fade-in 0.2s ease',
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 500,
+        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 560,
         maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 24px 80px rgba(0,0,0,0.2)',
         animation: 'modal-up 0.22s ease',
@@ -395,7 +395,7 @@ function JoinTaskModal({ zone, onClose, onJoined, activeTask, setActiveTask }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ zone, onClose, onJoin }) {
+function Sidebar({ zone, onClose, onJoin, inline }) {
   const [showDetails, setShowDetails] = useState(false)
   if (!zone) return null
   const style = getZoneStyle(zone.score)
@@ -405,14 +405,25 @@ function Sidebar({ zone, onClose, onJoin }) {
   const scoreColor = zone.score >= 70 ? '#ef4444' : zone.score >= 40 ? '#f59e0b' : '#22c55e'
   const scoreBg    = zone.score >= 70 ? '#fff1f2' : zone.score >= 40 ? '#fffbeb' : '#f0fdf4'
 
+  const containerStyle = inline ? {
+    background: '#fff',
+    borderRadius: 16,
+    boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+    border: '1px solid #e2e8f0',
+    overflow: 'hidden',
+    animation: 'modal-up 0.2s ease',
+    maxHeight: '80vh',
+    overflowY: 'auto',
+  } : {
+    position: 'absolute', top: 0, right: 0, height: '100%', width: 340,
+    background: '#fff', borderLeft: '1px solid #e2e8f0',
+    zIndex: 20, display: 'flex', flexDirection: 'column',
+    boxShadow: '-8px 0 32px rgba(0,0,0,0.12)',
+    animation: 'slide-in 0.22s ease', overflowY: 'auto',
+  }
+
   return (
-    <div style={{
-      position: 'absolute', top: 0, right: 0, height: '100%', width: 300,
-      background: '#fff', borderLeft: '1px solid #e2e8f0',
-      zIndex: 20, display: 'flex', flexDirection: 'column',
-      boxShadow: '-8px 0 32px rgba(0,0,0,0.12)',
-      animation: 'slide-in 0.22s ease', overflowY: 'auto',
-    }}>
+    <div style={containerStyle}>
 
       {/* ── Header ── */}
       <div style={{
@@ -593,7 +604,7 @@ function Sidebar({ zone, onClose, onJoin }) {
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={() => setShowDetails(false)}
         >
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', animation: 'modal-up 0.22s ease' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 540, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', animation: 'modal-up 0.22s ease' }}>
             <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: '#fff', borderRadius: '20px 20px 0 0', zIndex: 2 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -741,14 +752,30 @@ export default function TaskMap() {
   const [activeTask, setActiveTask] = useState(null) // one task at a time
   const mapRef = useRef(null)
 
-  // Suppress Google Maps billing/dev popup
+  // Suppress Google Maps billing/dev popup — multiple strategies
   useEffect(() => {
     const _alert = window.alert
     window.alert = (msg) => {
       if (typeof msg === 'string' && msg.toLowerCase().includes('google')) return
       _alert(msg)
     }
-    return () => { window.alert = _alert }
+
+    const kill = () => {
+      // Only target known Google Maps error classes — don't walk up DOM
+      document.querySelectorAll('.gm-err-container, .gm-err-content, .gm-err-autocomplete').forEach(el => {
+        el.style.display = 'none'
+      })
+    }
+
+    const t = setInterval(kill, 300)
+    const obs = new MutationObserver(kill)
+    obs.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      window.alert = _alert
+      clearInterval(t)
+      obs.disconnect()
+    }
   }, [])
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -830,16 +857,29 @@ export default function TaskMap() {
                 />
               ))}
 
+              {/* Floating popup near clicked marker */}
+              {selectedZone && (
+                <OverlayView
+                  position={{ lat: selectedZone.lat, lng: selectedZone.lng }}
+                  mapPaneName={OverlayView.FLOAT_PANE}
+                  getPixelPositionOffset={() => ({ x: 20, y: -180 })}
+                >
+                  <div style={{ width: 300, pointerEvents: 'all' }}>
+                    <Sidebar
+                      zone={selectedZone}
+                      onClose={() => setSelectedZone(null)}
+                      onJoin={() => { setJoinZone(selectedZone); setSelectedZone(null) }}
+                      inline
+                    />
+                  </div>
+                </OverlayView>
+              )}
+
               {userLocation && <UserPin position={userLocation} />}
             </GoogleMap>
 
             <LiveBar lastUpdate={lastUpdate} locationName={locationName} />
             <Legend />
-            <Sidebar
-              zone={selectedZone}
-              onClose={() => setSelectedZone(null)}
-              onJoin={() => { setJoinZone(selectedZone); setSelectedZone(null) }}
-            />
           </>
         )}
 
@@ -856,7 +896,7 @@ export default function TaskMap() {
         {/* Active task indicator */}
         {activeTask && (
           <div style={{
-            position: 'absolute', top: 12, right: selectedZone ? 302 : 12,
+            position: 'absolute', top: 12, right: 12,
             background: '#fffbeb', border: '1px solid #fde68a',
             borderRadius: 10, padding: '7px 12px', zIndex: 10,
             display: 'flex', alignItems: 'center', gap: 8,

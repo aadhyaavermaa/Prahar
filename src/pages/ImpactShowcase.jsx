@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ImpactNewspaper from '../components/ImpactNewspaper'
+import { useLang } from '../context/LanguageContext'
 
 // ─── Demo Data ────────────────────────────────────────────────────────────────
 
@@ -446,91 +447,423 @@ function DetailModal({ card, onClose }) {
 // ─── Upload Modal ─────────────────────────────────────────────────────────────
 
 function UploadModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ ngo: '', zone: '', domain: 'Pollution', description: '' })
+  const [step, setStep] = useState(1) // 1=inputs, 2=story-review
+  const [form, setForm] = useState({
+    ngo: '', zone: '', domain: 'Pollution', customDomain: '',
+    activity: '', people_impacted: '', volunteers: '',
+    experience: '', challenge: '', memorable_moment: '',
+  })
+  const [description, setDescription] = useState('')
   const [beforeUrl, setBeforeUrl] = useState('')
   const [afterUrl, setAfterUrl] = useState('')
+  const [generating, setGenerating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [aiUsed, setAiUsed] = useState(false)
+  const [showOptional, setShowOptional] = useState(false)
+  const [showRegenPanel, setShowRegenPanel] = useState(false)
+  const [regenFeedback, setRegenFeedback] = useState('')
+  const [regenOptions, setRegenOptions] = useState([])
 
-  const handleSubmit = async () => {
-    if (!form.ngo || !form.zone || !form.description) return alert('Please fill all fields')
+  const BASE = 'http://localhost:8000'
+  const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
+
+  const callGemini = async (prompt) => {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const genAI = new GoogleGenerativeAI(GEMINI_KEY)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const result = await model.generateContent(prompt)
+    return result.response.text().trim()
+  }
+  const REGEN_PRESETS = [
+    'Make it more emotional',
+    'Add more specific numbers',
+    'Make it shorter and punchier',
+    'Focus more on the human angle',
+    'Make the opening stronger',
+    'Add more context about the challenge',
+    'Make the ending more inspiring',
+    'Use a different tone',
+  ]
+
+  const effectiveDomain = form.domain === 'Other' ? (form.customDomain || 'Other') : form.domain
+
+  const generateStory = async (feedback = '', previousStory = '') => {
+    if (!form.ngo || !form.zone || !form.activity || !form.people_impacted) {
+      alert('Please fill NGO name, zone, activity, and people impacted first.')
+      return
+    }
+    setGenerating(true)
+    setShowRegenPanel(false)
+
+    const tones = ['warm and human', 'inspiring and energetic', 'grounded and factual', 'emotional and personal']
+    const tone = tones[Math.floor(Math.random() * tones.length)]
+    const isRegen = !!(feedback || previousStory)
+
+    let prompt
+    if (isRegen) {
+      prompt = `You are a skilled social impact writer for an NGO platform called PRAHAR.
+You previously wrote an impact story and the user wants it improved.
+
+ORIGINAL INPUTS:
+- NGO Name: ${form.ngo}
+- Location/Zone: ${form.zone}
+- Domain: ${effectiveDomain}
+- Activity Done: ${form.activity}
+- People Impacted: ${form.people_impacted}
+- Volunteers Involved: ${form.volunteers || 'not specified'}
+- Volunteer Experience: ${form.experience || 'not provided'}
+- Challenge Faced: ${form.challenge || 'not provided'}
+- Memorable Moment: ${form.memorable_moment || 'not provided'}
+
+PREVIOUS STORY:
+${previousStory || 'Not available'}
+
+USER FEEDBACK / WHAT TO IMPROVE:
+${feedback || 'Make it more engaging and different from the previous version'}
+
+INSTRUCTIONS:
+- Address the user's feedback DIRECTLY and visibly
+- Keep all factual details accurate
+- Make this version NOTICEABLY different from the previous story
+- Writing style: ${tone}
+- Total length: 120-180 words
+- No section headers, no bullet points
+- Sound authentic, not robotic
+- Write only the story, nothing else`
+    } else {
+      prompt = `You are a skilled social impact writer for an NGO platform called PRAHAR.
+Write a compelling, authentic impact story based on the following real inputs.
+
+INPUTS:
+- NGO Name: ${form.ngo}
+- Location/Zone: ${form.zone}
+- Domain: ${effectiveDomain}
+- Activity Done: ${form.activity}
+- People Impacted: ${form.people_impacted}
+- Volunteers Involved: ${form.volunteers || 'not specified'}
+- Volunteer Experience: ${form.experience || 'not provided'}
+- Challenge Faced: ${form.challenge || 'not provided'}
+- Memorable Moment: ${form.memorable_moment || 'not provided'}
+
+WRITING STYLE: ${tone}
+
+STORY STRUCTURE (write naturally, not as labeled sections):
+1. Open with the situation BEFORE the activity (1-2 sentences)
+2. Describe WHAT was done — specific actions (2-3 sentences)
+3. Show the IMPACT with numbers and human angle (2 sentences)
+4. Include an emotional moment if provided (1-2 sentences)
+5. Close with a forward-looking line (1 sentence)
+
+RULES:
+- Total length: 120-180 words
+- No robotic tone, no generic phrases like "making a difference"
+- Use specific details from the inputs
+- Do NOT use section headers or bullet points
+- Write only the story, nothing else`
+    }
+
+    try {
+      const story = await callGemini(prompt)
+      setDescription(story)
+      setAiUsed(true)
+      setStep(2)
+    } catch (err) {
+      console.error('Gemini error:', err)
+      // Feedback-aware fallback
+      const fb = feedback.toLowerCase()
+      let opening, closing
+      if (fb.includes('emotional') || fb.includes('human')) {
+        opening = `The streets of ${form.zone} told a story of neglect — until ${form.ngo} decided to act.`
+        closing = 'For the families who witnessed it, this was more than a cleanup. It was hope.'
+      } else if (fb.includes('short') || fb.includes('punchy')) {
+        opening = `${form.ngo} showed up. ${form.zone} needed help. They delivered.`
+        closing = `${form.people_impacted} lives changed. That's the whole story.`
+      } else if (fb.includes('number') || fb.includes('specific')) {
+        opening = `By 7 AM, ${form.volunteers || 'a team of volunteers'} had already gathered at ${form.zone}.`
+        closing = `Final count: ${form.people_impacted} people reached, zero excuses made.`
+      } else if (fb.includes('inspiring') || fb.includes('ending')) {
+        opening = `In ${form.zone}, ${form.ngo} took on a challenge that many had ignored.`
+        closing = `This is what ${form.people_impacted} people look like when someone finally shows up for them.`
+      } else {
+        opening = `In ${form.zone}, the situation demanded urgent attention.`
+        closing = 'This is what community-driven impact looks like.'
+      }
+      const fallback = `${opening} ${form.ngo} stepped in with a focused ${effectiveDomain.toLowerCase()} initiative — ${form.activity.toLowerCase()}. The effort directly reached ${form.people_impacted} people${form.volunteers ? `, with ${form.volunteers} dedicated volunteers on the ground` : ''}. ${form.challenge ? 'The team faced real challenges: ' + form.challenge + '. ' : ''}${form.memorable_moment ? 'A moment that stood out: ' + form.memorable_moment + '. ' : ''}${closing}`
+      setDescription(fallback)
+      setAiUsed(false)
+      setStep(2)
+    } finally {
+      setGenerating(false)
+      setRegenFeedback('')
+      setRegenOptions([])
+    }
+  }
+
+  const handleRegenerate = () => setShowRegenPanel(true)
+
+  const confirmRegenerate = () => {
+    const combined = [
+      ...regenOptions,
+      regenFeedback.trim(),
+    ].filter(Boolean).join('. ')
+    generateStory(combined || 'Make it different and more engaging', description)
+  }
+
+  const toggleRegenOption = (opt) => {
+    setRegenOptions(prev =>
+      prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]
+    )
+  }
+
+  const handlePublish = async () => {
+    if (!description.trim()) { alert('Story cannot be empty.'); return }
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 800))
-    const domainMap = { Pollution: { icon: '🌫️', color: '#64748b' }, Medical: { icon: '🏥', color: '#ef4444' }, 'Food Relief': { icon: '🍲', color: '#f59e0b' }, Shelter: { icon: '🏠', color: '#8b5cf6' }, Flood: { icon: '🌊', color: '#0ea5e9' } }
-    const d = domainMap[form.domain] || domainMap.Pollution
+    await new Promise(r => setTimeout(r, 600))
+    const domainMap = {
+      Pollution: { icon: '🌫️', color: '#64748b' },
+      Medical: { icon: '🏥', color: '#ef4444' },
+      'Food Relief': { icon: '🍲', color: '#f59e0b' },
+      Shelter: { icon: '🏠', color: '#8b5cf6' },
+      Flood: { icon: '🌊', color: '#0ea5e9' },
+      Other: { icon: '🌐', color: '#10b981' },
+    }
+    const d = domainMap[form.domain] || { icon: '🌐', color: '#10b981' }
     onAdd({
-      id: Date.now(), ngo: form.ngo, ngoBadge: '✅ Community Verified',
-      zone: form.zone, domain: form.domain, domainIcon: d.icon, domainColor: d.color,
+      id: Date.now(),
+      ngo: form.ngo,
+      ngoBadge: '✅ Community Verified',
+      zone: form.zone,
+      domain: effectiveDomain,
+      domainIcon: d.icon,
+      domainColor: d.color,
       date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ' · Just now',
-      volunteers: Math.floor(Math.random() * 15) + 3,
+      volunteers: parseInt(form.volunteers) || Math.floor(Math.random() * 10) + 3,
       hours: Math.floor(Math.random() * 5) + 1,
-      score: Math.floor(Math.random() * 20) + 70,
-      summary: form.description,
+      score: Math.floor(Math.random() * 20) + 72,
+      summary: description,
       beforeImg: beforeUrl || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
       afterImg: afterUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80',
-      tags: [form.domain, form.zone.split(',')[0]],
-      wasteKg: 0, featured: false,
+      tags: [effectiveDomain, form.zone.split(',')[0], `${form.people_impacted} Impacted`].filter(Boolean),
+      wasteKg: 0,
+      featured: false,
     })
     setSubmitting(false)
     onClose()
   }
 
-  const inp = (label, key, placeholder, type = 'text') => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>{label}</label>
+  const inp = (label, key, placeholder, type = 'text', required = false) => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
+      </label>
       {type === 'textarea' ? (
-        <textarea value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} rows={3}
-          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+        <textarea value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+          placeholder={placeholder} rows={2}
+          style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+          onFocus={e => e.target.style.borderColor = '#10b981'}
+          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
       ) : (
-        <input value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} type={type}
-          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+        <input value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+          placeholder={placeholder} type={type}
+          style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+          onFocus={e => e.target.style.borderColor = '#10b981'}
+          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
       )}
     </div>
   )
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fade-in 0.2s ease' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', animation: 'modal-up 0.22s ease' }}>
-        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 2, borderRadius: '20px 20px 0 0' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fade-in 0.2s ease' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', animation: 'modal-up 0.22s ease' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 2, borderRadius: '20px 20px 0 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>📤 Upload Impact Story</h3>
-              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>Share your NGO's real-world impact</p>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>
+                {step === 1 ? '📤 Upload Impact Story' : '✏️ Review & Edit Story'}
+              </h3>
+              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
+                {step === 1 ? 'Fill in details — AI will write the story for you' : 'Edit the AI-generated story or write your own'}
+              </p>
             </div>
             <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#64748b', cursor: 'pointer', width: 32, height: 32, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+            {[1, 2].map(s => (
+              <div key={s} style={{ flex: 1, height: 3, borderRadius: 99, background: s <= step ? '#10b981' : '#e2e8f0', transition: 'background 0.3s' }} />
+            ))}
+          </div>
         </div>
-        <div style={{ padding: '20px 22px 24px' }}>
-          {inp('NGO Name *', 'ngo', 'e.g. Green Earth Foundation')}
-          {inp('Zone / Location *', 'zone', 'e.g. Yamuna Bank, Delhi')}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>Domain</label>
-            <select value={form.domain} onChange={e => setForm(p => ({ ...p, domain: e.target.value }))}
-              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: 'white' }}>
-              {['Pollution', 'Medical', 'Food Relief', 'Shelter', 'Flood'].map(d => <option key={d}>{d}</option>)}
-            </select>
+
+        {/* Step 1 — Inputs */}
+        {step === 1 && (
+          <div style={{ padding: '18px 22px 22px' }}>
+            <div style={{ gridColumn: '1/-1', marginBottom: 12 }}>{inp('NGO Name', 'ngo', 'e.g. Green Earth Foundation', 'text', true)}</div>
+            <div style={{ marginBottom: 12 }}>{inp('Zone / Location', 'zone', 'e.g. Yamuna Bank, Delhi', 'text', true)}</div>
+
+            {/* Domain with Other option */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Domain</label>
+              <select value={form.domain} onChange={e => setForm(p => ({ ...p, domain: e.target.value }))}
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: 'white' }}>
+                {['Pollution', 'Medical', 'Food Relief', 'Shelter', 'Flood', 'Other'].map(d => <option key={d}>{d}</option>)}
+              </select>
+              {form.domain === 'Other' && (
+                <input
+                  value={form.customDomain}
+                  onChange={e => setForm(p => ({ ...p, customDomain: e.target.value }))}
+                  placeholder="e.g. Education, Animal Welfare, Women Empowerment..."
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #10b981', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', marginTop: 8 }}
+                />
+              )}
+            </div>
+
+            {inp('What activity was done?', 'activity', 'e.g. Cleaned 400kg plastic from riverbank, distributed 300 meals...', 'textarea', true)}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>{inp('People Impacted', 'people_impacted', 'e.g. 340', 'number', true)}</div>
+              <div>{inp('Volunteers Involved', 'volunteers', 'e.g. 12', 'number')}</div>
+            </div>
+
+            <button onClick={() => setShowOptional(v => !v)}
+              style={{ width: '100%', padding: '8px 0', background: 'none', border: '1.5px dashed #e2e8f0', borderRadius: 10, color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              {showOptional ? '▲ Hide' : '▼ Add'} optional details (makes story richer)
+            </button>
+
+            {showOptional && (
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 14px 2px', marginBottom: 12, border: '1px solid #e2e8f0' }}>
+                {inp('Your experience / feeling', 'experience', 'e.g. It was overwhelming to see so many people in need...')}
+                {inp('Challenge faced', 'challenge', 'e.g. Heavy rain made it difficult but the team pushed through...')}
+                {inp('Memorable moment', 'memorable_moment', 'e.g. An elderly woman thanked us with tears in her eyes...')}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Before Image URL</label>
+                <input value={beforeUrl} onChange={e => setBeforeUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>After Image URL</label>
+                <input value={afterUrl} onChange={e => setAfterUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <button onClick={() => generateStory()} disabled={generating}
+              style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', cursor: generating ? 'wait' : 'pointer', fontWeight: 700, fontSize: 14, background: generating ? '#94a3b8' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: 'white', boxShadow: '0 4px 16px rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10, transition: 'all 0.2s' }}>
+              {generating ? (
+                <>
+                  <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Gemini is writing your story…
+                </>
+              ) : '✨ Generate Story with AI'}
+            </button>
+
+            <button onClick={() => { setDescription(''); setStep(2) }}
+              style={{ width: '100%', padding: '10px 0', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              ✍️ Write my own story instead
+            </button>
           </div>
-          {inp('Impact Description *', 'description', 'Describe what your team achieved...', 'textarea')}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>Before Image URL (optional)</label>
-            <input value={beforeUrl} onChange={e => setBeforeUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+        )}
+
+        {/* Step 2 — Story Review & Edit */}
+        {step === 2 && (
+          <div style={{ padding: '18px 22px 22px' }}>
+            {aiUsed && (
+              <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1px solid #ddd6fe', borderRadius: 12, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 18 }}>✨</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>AI-Generated by Gemini 1.5 Flash</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>You can edit this freely or rewrite it completely</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Your Impact Story</label>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>{description.length} chars</span>
+              </div>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={8}
+                placeholder="Write or edit your impact story here..."
+                style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #10b981', borderRadius: 12, fontSize: 13, lineHeight: 1.7, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#0f172a' }}
+              />
+            </div>
+
+            {/* Regenerate panel */}
+            {!showRegenPanel ? (
+              <button onClick={handleRegenerate} disabled={generating}
+                style={{ width: '100%', padding: '9px 0', borderRadius: 10, background: 'none', border: '1.5px solid #7c3aed', color: '#7c3aed', fontWeight: 600, fontSize: 12, cursor: 'pointer', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {generating ? '⏳ Regenerating…' : '🔄 Regenerate with AI'}
+              </button>
+            ) : (
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#7c3aed', marginBottom: 10 }}>🎯 What should the new story focus on?</div>
+
+                {/* Quick preset chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {REGEN_PRESETS.map(opt => (
+                    <button key={opt} onClick={() => toggleRegenOption(opt)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1.5px solid',
+                        background: regenOptions.includes(opt) ? '#7c3aed' : 'white',
+                        color: regenOptions.includes(opt) ? 'white' : '#7c3aed',
+                        borderColor: '#7c3aed',
+                        transition: 'all 0.15s',
+                      }}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom feedback */}
+                <textarea
+                  value={regenFeedback}
+                  onChange={e => setRegenFeedback(e.target.value)}
+                  placeholder="Or type your own feedback... e.g. 'Focus more on the elderly residents who were helped'"
+                  rows={2}
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #ddd6fe', borderRadius: 10, fontSize: 12, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', background: 'white', marginBottom: 10 }}
+                />
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setShowRegenPanel(false); setRegenFeedback(''); setRegenOptions([]) }}
+                    style={{ flex: 1, padding: '8px 0', borderRadius: 10, background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button onClick={confirmRegenerate} disabled={generating}
+                    style={{ flex: 2, padding: '8px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    {generating ? (
+                      <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Generating…</>
+                    ) : '✨ Regenerate Now'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setStep(1)}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                ← Back
+              </button>
+              <button onClick={handlePublish} disabled={submitting || !description.trim()}
+                style={{ flex: 2, padding: '11px 0', borderRadius: 12, border: 'none', cursor: submitting ? 'wait' : 'pointer', fontWeight: 700, fontSize: 14, background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', boxShadow: '0 4px 16px rgba(16,185,129,0.3)', opacity: submitting || !description.trim() ? 0.6 : 1 }}>
+                {submitting ? '⏳ Publishing…' : '🚀 Publish Impact Story'}
+              </button>
+            </div>
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>After Image URL (optional)</label>
-            <input value={afterUrl} onChange={e => setAfterUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-          <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 16px rgba(16,185,129,0.3)', opacity: submitting ? 0.7 : 1 }}>
-            {submitting ? '⏳ Publishing…' : '🚀 Publish Impact Story'}
-          </button>
-        </div>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function ImpactShowcase() {
   const navigate = useNavigate()
+  const { t } = useLang()
   const [cards, setCards] = useState(DEMO_CARDS)
   const [selectedCard, setSelectedCard] = useState(null)
   const [showUpload, setShowUpload] = useState(false)
@@ -562,7 +895,7 @@ export default function ImpactShowcase() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 99, padding: '5px 14px' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'glow-dot 1.5s ease-in-out infinite' }} />
-              <span style={{ color: '#6ee7b7', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Week of Apr 14–20, 2026</span>
+              <span style={{ color: '#6ee7b7', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{t('impactWeek')}</span>
             </div>
             </div>
 

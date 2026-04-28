@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, signInWithGoogle, getUserProfile } from '../firebase'
 import { getRedirectPath } from '../hooks/usePostAuthRedirect'
+import { useLang } from '../context/LanguageContext'
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '', userType: 'volunteer' })
@@ -10,13 +11,14 @@ const Login = () => {
   const [googleError, setGoogleError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { t, lang } = useLang()
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
 
   const validate = () => {
     const errs = {}
-    if (!formData.email) errs.email = 'Email is required'
-    if (!formData.password) errs.password = 'Password is required'
+    if (!formData.email) errs.email = lang === 'hi' ? 'ईमेल आवश्यक है' : 'Email is required'
+    if (!formData.password) errs.password = lang === 'hi' ? 'पासवर्ड आवश्यक है' : 'Password is required'
     return errs
   }
 
@@ -24,7 +26,6 @@ const Login = () => {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-
     setLoading(true)
     try {
       const result = await signInWithEmailAndPassword(auth, formData.email, formData.password)
@@ -45,12 +46,10 @@ const Login = () => {
     try {
       const result = await signInWithGoogle()
       const profile = await getUserProfile(result.user.uid)
-      // Google users default to volunteer if no profile yet
       const role = profile?.role || formData.userType
       const path = await getRedirectPath(result.user.uid, role)
       navigate(path)
     } catch (err) {
-      console.error('Google sign-in error:', err.code, err.message)
       setGoogleError(friendlyError(err.code))
     } finally {
       setLoading(false)
@@ -58,14 +57,14 @@ const Login = () => {
   }
 
   const friendlyError = (code) => {
+    const isHi = lang === 'hi'
     switch (code) {
       case 'auth/user-not-found':
       case 'auth/wrong-password':
-      case 'auth/invalid-credential': return 'Invalid email or password.'
-      case 'auth/popup-closed-by-user': return 'Sign-in popup was closed. Please try again.'
-      case 'auth/popup-blocked': return 'Popup blocked. Please allow popups for this site.'
-      case 'auth/invalid-api-key': return 'Firebase is not configured. Check your API keys.'
-      default: return 'Something went wrong. Please try again.'
+      case 'auth/invalid-credential': return isHi ? 'गलत ईमेल या पासवर्ड।' : 'Invalid email or password.'
+      case 'auth/popup-closed-by-user': return isHi ? 'पॉपअप बंद हो गया। दोबारा कोशिश करें।' : 'Sign-in popup was closed. Please try again.'
+      case 'auth/popup-blocked': return isHi ? 'पॉपअप ब्लॉक है। पॉपअप की अनुमति दें।' : 'Popup blocked. Please allow popups for this site.'
+      default: return isHi ? 'कुछ गलत हुआ। दोबारा कोशिश करें।' : 'Something went wrong. Please try again.'
     }
   }
 
@@ -74,33 +73,35 @@ const Login = () => {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <h1>Welcome Back</h1>
-            <p>Sign in to your Prahar account</p>
+            <h1>{t('welcomeBack')}</h1>
+            <p>{t('signInSubtitle')}</p>
           </div>
 
           <div className="role-toggle">
             <button type="button" className={`role-btn ${formData.userType === 'volunteer' ? 'active' : ''}`}
               onClick={() => setFormData({ ...formData, userType: 'volunteer' })}>
-              🙋 Volunteer
+              🙋 {t('volunteer')}
             </button>
             <button type="button" className={`role-btn ${formData.userType === 'ngo' ? 'active' : ''}`}
               onClick={() => setFormData({ ...formData, userType: 'ngo' })}>
-              🏢 NGO Representative
+              🏢 {t('ngoRep')}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email">{t('emailAddress')}</label>
               <input type="email" id="email" name="email" value={formData.email} onChange={handleChange}
-                className={`form-control ${errors.email ? 'error' : ''}`} placeholder="Enter your email" />
+                className={`form-control ${errors.email ? 'error' : ''}`}
+                placeholder={lang === 'hi' ? 'अपना ईमेल दर्ज करें' : 'Enter your email'} />
               {errors.email && <span className="error-message">{errors.email}</span>}
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t('password')}</label>
               <input type="password" id="password" name="password" value={formData.password} onChange={handleChange}
-                className={`form-control ${errors.password ? 'error' : ''}`} placeholder="Enter your password" />
+                className={`form-control ${errors.password ? 'error' : ''}`}
+                placeholder={lang === 'hi' ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password'} />
               {errors.password && <span className="error-message">{errors.password}</span>}
             </div>
 
@@ -110,17 +111,17 @@ const Login = () => {
               <label className="checkbox-label">
                 <input type="checkbox" name="remember" />
                 <span className="checkmark"></span>
-                Remember me
+                {t('rememberMe')}
               </label>
-              <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
+              <Link to="/forgot-password" className="forgot-link">{t('forgotPassword')}</Link>
             </div>
 
             <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('signingIn') : t('signIn')}
             </button>
           </form>
 
-          <div className="auth-divider"><span>OR</span></div>
+          <div className="auth-divider"><span>{t('orDivider')}</span></div>
 
           <div className="social-auth">
             <button type="button" className="btn btn-social btn-google btn-full" onClick={handleGoogleSignIn} disabled={loading}>
@@ -130,13 +131,13 @@ const Login = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              {t('continueGoogle')}
             </button>
             {googleError && <span className="error-message" style={{display:'block',textAlign:'center',marginTop:'0.5rem'}}>{googleError}</span>}
           </div>
 
           <div className="auth-footer">
-            <p>Don't have an account? <Link to="/signup">Sign up</Link></p>
+            <p>{t('noAccount')} <Link to="/signup">{lang === 'hi' ? 'साइन अप करें' : 'Sign up'}</Link></p>
           </div>
         </div>
       </div>

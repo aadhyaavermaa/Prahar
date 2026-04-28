@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useLang } from "../context/LanguageContext";
 
 const VOLUNTEERS = [
   { rank: 1, name: "Priya S.", points: 980, badge: "River Guardian", avatar: "P", streak: 12, tasks: 24 },
@@ -129,6 +130,7 @@ function NgoRow({ n }) {
 export default function Leaderboard() {
   const [tab, setTab] = useState("volunteers");
   const navigate = useNavigate();
+  const { t } = useLang();
 
   return (
     <div className="min-h-screen bg-[#f8fafb]">
@@ -137,8 +139,8 @@ export default function Leaderboard() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🏆</div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Leaderboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Top performers making Delhi's future cleaner</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t('leaderboardTitle')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('leaderboardSubtitle')}</p>
         </div>
 
         {/* Top 3 Podium (visual) */}
@@ -179,12 +181,12 @@ export default function Leaderboard() {
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 shadow-sm mb-6">
-          {["volunteers", "ngos"].map((t) => (
-            <button key={t} onClick={() => setTab(t)}
+          {["volunteers", "ngos"].map((t_) => (
+            <button key={t_} onClick={() => setTab(t_)}
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${
-                tab === t ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
+                tab === t_ ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
               }`}>
-              {t === "volunteers" ? "🙋 Volunteers" : "🏢 NGOs"}
+              {t_ === "volunteers" ? t('volunteers') : t('ngos')}
             </button>
           ))}
         </div>
@@ -198,7 +200,7 @@ export default function Leaderboard() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-gray-400 mt-8">
-          Rankings update weekly · Earn points by completing verified tasks
+          {t('leaderboardFooter')}
         </p>
       </div>
     </div>

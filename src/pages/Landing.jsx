@@ -1,27 +1,22 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { useLang } from '../context/LanguageContext'
 
 const Landing = () => {
+  const { t } = useLang()
   return (
     <div className="landing">
       <section className="hero">
         <div className="hero-container">
           <div className="hero-content">
             <h1 className="hero-title">
-              Environmental Intelligence for
-              <span className="highlight"> Smart Resource Allocation</span>
+              {t('heroTitle')}
+              <span className="highlight"> {t('heroHighlight')}</span>
             </h1>
-            <p className="hero-subtitle">
-              Satellite + API data predicts crises 48–72 hrs before they peak. 
-              AI-powered volunteer matching and dynamic workforce redistribution for NGOs.
-            </p>
+            <p className="hero-subtitle">{t('heroSubtitle')}</p>
             <div className="hero-buttons">
-              <Link to="/signup" className="btn btn-primary btn-large">
-                Get Started
-              </Link>
-              <Link to="/about" className="btn btn-outline btn-large">
-                Learn More
-              </Link>
+              <Link to="/signup" className="btn btn-primary btn-large">{t('getStarted')}</Link>
+              <Link to="/about" className="btn btn-outline btn-large">{t('learnMore')}</Link>
             </div>
           </div>
           <div className="hero-visual">
@@ -46,38 +41,14 @@ const Landing = () => {
 
       <section className="features">
         <div className="container">
-          <h2 className="section-title">Powerful Features</h2>
+          <h2 className="section-title">{t('powerfulFeatures')}</h2>
           <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">🔄</div>
-              <h3>Dynamic Workforce Redistribution</h3>
-              <p>Continuously rebalances volunteers across NGOs and regions by demand</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🧠</div>
-              <h3>AI Volunteer Matching</h3>
-              <p>Gemini matches by skill, location, reliability, and urgency</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🗺️</div>
-              <h3>Fleet Routing</h3>
-              <p>Multi-volunteer, multi-location deployment optimization</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">📸</div>
-              <h3>CV Impact Scoring</h3>
-              <p>AI scores before/after photos — proof, not self-reporting</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🏆</div>
-              <h3>Dual Gamification</h3>
-              <p>Points, badges & leaderboards for both volunteers AND NGOs</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">📰</div>
-              <h3>Weekly Impact Showcase</h3>
-              <p>Auto-compiled visual newspaper of real social impact</p>
-            </div>
+            <div className="feature-card"><div className="feature-icon">🔄</div><h3>{t('feature1Title')}</h3><p>{t('feature1Desc')}</p></div>
+            <div className="feature-card"><div className="feature-icon">🧠</div><h3>{t('feature2Title')}</h3><p>{t('feature2Desc')}</p></div>
+            <div className="feature-card"><div className="feature-icon">🗺️</div><h3>{t('feature3Title')}</h3><p>{t('feature3Desc')}</p></div>
+            <div className="feature-card"><div className="feature-icon">📸</div><h3>{t('feature4Title')}</h3><p>{t('feature4Desc')}</p></div>
+            <div className="feature-card"><div className="feature-icon">🏆</div><h3>{t('feature5Title')}</h3><p>{t('feature5Desc')}</p></div>
+            <div className="feature-card"><div className="feature-icon">📰</div><h3>{t('feature6Title')}</h3><p>{t('feature6Desc')}</p></div>
           </div>
         </div>
       </section>
@@ -85,15 +56,11 @@ const Landing = () => {
       <section className="cta">
         <div className="container">
           <div className="cta-content">
-            <h2>Ready to Make an Impact?</h2>
-            <p>Join thousands of NGOs and volunteers making a difference with smart resource allocation.</p>
+            <h2>{t('ctaTitle')}</h2>
+            <p>{t('ctaSubtitle')}</p>
             <div className="cta-buttons">
-              <Link to="/signup" className="btn btn-primary btn-large">
-                Join as Volunteer
-              </Link>
-              <Link to="/ngos/register" className="btn btn-outline btn-large">
-                Register Your NGO
-              </Link>
+              <Link to="/signup" className="btn btn-primary btn-large">{t('joinVolunteer')}</Link>
+              <Link to="/ngos/register" className="btn btn-outline btn-large">{t('registerNgo')}</Link>
             </div>
           </div>
         </div>

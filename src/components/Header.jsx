@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useLang } from '../context/LanguageContext'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const showBack = location.pathname !== '/'
+  const { t, toggleLang } = useLang()
 
   return (
     <header className="header">
@@ -25,7 +27,7 @@ const Header = () => {
                 onMouseEnter={e => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = 'white' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#10b981' }}
               >
-                ← Back
+                {t('back')}
               </button>
             )}
             <Link to="/" className="nav-logo">
@@ -35,17 +37,30 @@ const Header = () => {
           </div>
 
           <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
-            <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
-            <Link to="/map" className="nav-link" onClick={() => setIsMenuOpen(false)}>🗺️ Live Map</Link>
-            <Link to="/impact" className="nav-link" onClick={() => setIsMenuOpen(false)}>📰 Impact</Link>
-            <Link to="/leaderboard" className="nav-link" onClick={() => setIsMenuOpen(false)}>🏆 Leaderboard</Link>
-            <Link to="/volunteer/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>Vol. Dashboard</Link>
-            <Link to="/ngo/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>NGO Dashboard</Link>
+            <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('home')}</Link>
+            <Link to="/map" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('liveMap')}</Link>
+            <Link to="/impact" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('impact')}</Link>
+            <Link to="/leaderboard" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('leaderboard')}</Link>
+            <Link to="/volunteer/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>{t('volDashboard')}</Link>
+            <Link to="/ngo/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>{t('ngoDashboard')}</Link>
           </div>
 
           <div className="nav-auth">
-            <button className="btn btn-outline" onClick={() => navigate('/login')}>Login</button>
-            <button className="btn btn-primary" onClick={() => navigate('/signup')}>Sign Up</button>
+            <button
+              onClick={toggleLang}
+              style={{
+                background: 'transparent', border: '1.5px solid #e5e7eb',
+                borderRadius: '8px', color: '#374151', cursor: 'pointer',
+                padding: '4px 10px', fontSize: '13px', fontWeight: '600',
+                transition: 'all 0.2s', whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.color = '#10b981' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#374151' }}
+            >
+              {t('langToggle')}
+            </button>
+            <button className="btn btn-outline" onClick={() => navigate('/login')}>{t('login')}</button>
+            <button className="btn btn-primary" onClick={() => navigate('/signup')}>{t('signUp')}</button>
           </div>
 
           <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>

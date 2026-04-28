@@ -127,6 +127,19 @@ class VolunteerCreate(BaseModel):
     causes: list[str]
     bio: str = ""
 
+class ImpactStoryRequest(BaseModel):
+    ngo: str
+    zone: str
+    domain: str
+    activity: str
+    people_impacted: int
+    volunteers: int = 0
+    experience: str = ""
+    challenge: str = ""
+    memorable_moment: str = ""
+    feedback: str = ""          # what user wants improved on regenerate
+    previous_story: str = ""    # previous version to improve upon
+
 # ─────────────────────────────────────────
 # HEALTH CHECK
 # ─────────────────────────────────────────
@@ -134,6 +147,15 @@ class VolunteerCreate(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok", "message": "PRAHAR backend is running"}
+
+@app.get("/api/test-gemini")
+def test_gemini():
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content("Say 'Gemini is working' in one sentence.")
+        return {"status": "ok", "response": response.text.strip(), "api_key_set": bool(GEMINI_API_KEY)}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "error_type": type(e).__name__, "api_key_set": bool(GEMINI_API_KEY)}
 
 # ─────────────────────────────────────────
 # ZONES
@@ -218,6 +240,129 @@ def add_volunteer(volunteer: VolunteerCreate):
         volunteers_db.remove(existing)
     volunteers_db.append(volunteer.model_dump())
     return {"message": "Volunteer saved", "volunteer": volunteer}
+
+# ─────────────────────────────────────────
+# GEMINI IMPACT STORY GENERATOR
+# ─────────────────────────────────────────
+
+@app.post("/api/generate-impact-story")
+def generate_impact_story(req: ImpactStoryRequest):
+    import random
+    tones = ["warm and human", "inspiring and energetic", "grounded and factual", "emotional and personal"]
+    tone = random.choice(tones)
+
+    is_regeneration = bool(req.feedback or req.previous_story)
+
+    if is_regeneration:
+        prompt = f"""
+You are a skilled social impact writer for an NGO platform called PRAHAR.
+You previously wrote an impact story and the user wants it improved.
+
+ORIGINAL INPUTS:
+- NGO Name: {req.ngo}
+- Location/Zone: {req.zone}
+- Domain: {req.domain}
+- Activity Done: {req.activity}
+- People Impacted: {req.people_impacted}
+- Volunteers Involved: {req.volunteers if req.volunteers else 'not specified'}
+- Volunteer Experience: {req.experience if req.experience else 'not provided'}
+- Challenge Faced: {req.challenge if req.challenge else 'not provided'}
+- Memorable Moment: {req.memorable_moment if req.memorable_moment else 'not provided'}
+
+PREVIOUS STORY:
+{req.previous_story if req.previous_story else 'Not available'}
+
+USER FEEDBACK / WHAT TO IMPROVE:
+{req.feedback if req.feedback else 'Make it more engaging and different from the previous version'}
+
+INSTRUCTIONS:
+- Address the user's feedback directly
+- Keep all factual details accurate
+- Make this version noticeably different from the previous story
+- Writing style: {tone}
+- Total length: 120-180 words
+- No section headers, no bullet points
+- Sound authentic, not robotic
+- Write only the story, nothing else
+"""
+    else:
+        prompt = f"""
+You are a skilled social impact writer for an NGO platform called PRAHAR.
+Write a compelling, authentic impact story based on the following real inputs.
+
+INPUTS:
+- NGO Name: {req.ngo}
+- Location/Zone: {req.zone}
+- Domain: {req.domain}
+- Activity Done: {req.activity}
+- People Impacted: {req.people_impacted}
+- Volunteers Involved: {req.volunteers if req.volunteers else 'not specified'}
+- Volunteer Experience: {req.experience if req.experience else 'not provided'}
+- Challenge Faced: {req.challenge if req.challenge else 'not provided'}
+- Memorable Moment: {req.memorable_moment if req.memorable_moment else 'not provided'}
+
+WRITING STYLE: {tone}
+
+STORY STRUCTURE (write naturally, not as labeled sections):
+1. Open with the situation BEFORE the activity (1-2 sentences, paint the picture)
+2. Describe WHAT was done — specific actions, not vague (2-3 sentences)
+3. Show the IMPACT with numbers and human angle (2 sentences)
+4. Include an emotional or human moment if provided (1-2 sentences)
+5. Close with a forward-looking or inspiring line (1 sentence)
+
+RULES:
+- Total length: 120-180 words
+- No robotic tone, no generic phrases like "making a difference"
+- Use specific details from the inputs
+- Each generation must feel fresh and unique
+- Do NOT use section headers or bullet points
+- Write as one flowing paragraph or 2-3 short paragraphs
+- Sound like a real person wrote it, not AI
+
+Write only the story, nothing else.
+"""
+
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        story = response.text.strip()
+        return {"story": story, "generated": True}
+    except Exception as e:
+        import random
+        # Fallback that actually varies based on feedback
+        feedback_lower = req.feedback.lower() if req.feedback else ""
+        
+        if "emotional" in feedback_lower or "human" in feedback_lower:
+            opening = f"The streets of {req.zone} told a story of neglect — until {req.ngo} decided to act."
+            closing = "For the families who witnessed it, this was more than a cleanup. It was hope."
+        elif "short" in feedback_lower or "punchy" in feedback_lower:
+            opening = f"{req.ngo} showed up. {req.zone} needed help. They delivered."
+            closing = f"{req.people_impacted} lives changed. That's the whole story."
+        elif "number" in feedback_lower or "specific" in feedback_lower:
+            opening = f"By 7 AM, {req.volunteers or 'a team of'} volunteers had already gathered at {req.zone}."
+            closing = f"Final count: {req.people_impacted} people reached, zero excuses made."
+        elif "opening" in feedback_lower:
+            opening = f"Nobody expected {req.zone} to look different by evening. {req.ngo} had other plans."
+            closing = "Small actions, when multiplied, transform communities."
+        elif "inspiring" in feedback_lower or "ending" in feedback_lower:
+            opening = f"In {req.zone}, {req.ngo} took on a challenge that many had ignored."
+            closing = f"This is what {req.people_impacted} people look like when someone finally shows up for them."
+        else:
+            opening = f"In {req.zone}, the situation demanded urgent attention."
+            closing = "This is what community-driven impact looks like."
+        
+        fallback = (
+            f"{opening} "
+            f"{req.ngo} stepped in with a focused {req.domain.lower()} initiative — "
+            f"{req.activity.lower()}. "
+            f"The effort directly reached {req.people_impacted} people"
+            f"{f', with {req.volunteers} dedicated volunteers on the ground' if req.volunteers else ''}. "
+            f"{'The team faced real challenges: ' + req.challenge + '. ' if req.challenge else ''}"
+            f"{'A moment that stood out: ' + req.memorable_moment + '. ' if req.memorable_moment else ''}"
+            f"{closing}"
+        )
+        return {"story": fallback, "generated": False, "error": str(e), "error_type": type(e).__name__}
+
 
 # ─────────────────────────────────────────
 # GEMINI AI MATCHING

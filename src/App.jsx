@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { LanguageProvider } from './context/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -14,10 +15,31 @@ import ImpactShowcase from './pages/ImpactShowcase'
 import Leaderboard from './pages/Leaderboard'
 import './index.css'
 
+// Suppress Google Maps billing popup via MutationObserver
+if (typeof window !== 'undefined') {
+  const _alert = window.alert
+  window.alert = (msg) => {
+    if (typeof msg === 'string' && /google/i.test(msg)) return
+    _alert.call(window, msg)
+  }
+
+  const removeGooglePopup = () => {
+    document.querySelectorAll('.gm-err-container, .gm-err-content, .gm-err-autocomplete').forEach(el => {
+      el.style.display = 'none'
+    })
+  }
+
+  const observer = new MutationObserver(removeGooglePopup)
+  observer.observe(document.documentElement, { childList: true, subtree: true })
+  // Also run on interval as fallback
+  setInterval(removeGooglePopup, 500)
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <LanguageProvider>
+      <AuthProvider>
+        <Routes>
         <Route path="/" element={<WithLayout><Landing /></WithLayout>} />
         <Route path="/login" element={<WithLayout><Login /></WithLayout>} />
         <Route path="/signup" element={<WithLayout><Signup /></WithLayout>} />
@@ -43,7 +65,8 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </LanguageProvider>
   )
 }
 
