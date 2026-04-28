@@ -3,13 +3,14 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-}
+  apiKey: "AIzaSyBZiBScTGSXOQLd39Udg7Z4M94pfcwKvgw",
+  authDomain: "prahar-b7b72.firebaseapp.com",
+  projectId: "prahar-b7b72",
+  storageBucket: "prahar-b7b72.firebasestorage.app",
+  messagingSenderId: "550476506353",
+  appId: "1:550476506353:web:79ed253939e54dd8ecb550",
+  measurementId: "G-JVYMFGS9LQ"
+};
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)

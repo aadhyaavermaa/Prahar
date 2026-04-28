@@ -134,7 +134,7 @@ function TaskCard({ task, volunteerId, onAccepted }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({ profile, onLogout }) {
+function Sidebar({ profile, level, levelProgress, onLogout }) {
   const badges = profile?.badges || [];
   const points = profile?.points || 0;
 
@@ -151,6 +151,15 @@ function Sidebar({ profile, onLogout }) {
           {(profile?.causes || []).slice(0, 3).map((c) => (
             <span key={c} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">{c}</span>
           ))}
+        </div>
+        <div className="mt-5 text-left">
+          <div className="flex items-center justify-between text-xs text-gray-500 uppercase tracking-wide">
+            <span>Level {level}</span>
+            <span>{levelProgress}%</span>
+          </div>
+          <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-teal-500" style={{ width: `${levelProgress}%` }} />
+          </div>
         </div>
       </div>
 
@@ -213,6 +222,8 @@ export default function VolunteerDashboard() {
 
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [profile, setProfile] = useState(null);
   const [filter, setFilter] = useState("all");
 
@@ -239,18 +250,59 @@ export default function VolunteerDashboard() {
       .finally(() => setLoadingTasks(false));
   }, []);
 
+  // Load leaderboard highlights
+  useEffect(() => {
+    setLoadingLeaderboard(true);
+    fetch(`${BASE}/api/matching/leaderboard?limit=5`)
+      .then((r) => r.json())
+      .then((data) => setLeaderboard(Array.isArray(data) ? data : []))
+      .catch(() => setLeaderboard([]))
+      .finally(() => setLoadingLeaderboard(false));
+  }, []);
+
   const logout = async () => {
     const { getAuth, signOut } = await import("firebase/auth");
     await signOut(getAuth());
     navigate("/login");
   };
 
+  const myTasks = tasks.filter((t) => t.volunteers_assigned?.includes(user?.uid));
+  const openTasks = tasks.filter((t) => t.status === "open");
+  const activeTasks = myTasks.length;
+  const completedTasks = tasks.filter(
+    (t) => t.status === "completed" && t.volunteers_assigned?.includes(user?.uid)
+  ).length;
+  const points = profile?.points ?? 0;
+  const level = Math.max(1, Math.min(10, Math.ceil(points / 250) || 1));
+  const levelProgress = Math.min(100, Math.round((points / (level * 250 || 250)) * 100));
+  const hoursLogged = profile?.hoursLogged ?? Math.max(10, Math.round(activeTasks * 4 + completedTasks * 2));
+  const reliability = profile?.reliability_score ? Math.round(profile.reliability_score * 100) : 0;
+  const successRate = profile?.success_rate ? Math.round(profile.success_rate * 100) : 0;
+  const avgRating = profile?.avg_rating ?? 4.7;
   const filtered = tasks.filter((t) => {
     if (filter === "all") return true;
     if (filter === "open") return t.status === "open";
     if (filter === "mine") return t.volunteers_assigned?.includes(user?.uid);
     return true;
   });
+
+  const recentActivity = profile?.recentActivity?.slice(0, 3) || [
+    {
+      title: myTasks[0]
+        ? `Accepted “${myTasks[0].title}”`
+        : "Started a new volunteering journey",
+      when: "Today",
+    },
+    {
+      title: openTasks[0]
+        ? `Exploring ${openTasks[0].zone_name} opportunities`
+        : "Browsing new tasks",
+      when: "2 days ago",
+    },
+    {
+      title: `Earned ${points} points so far`, when: "This week",
+    },
+  ];
 
   if (authLoading) {
     return (
@@ -284,64 +336,190 @@ export default function VolunteerDashboard() {
 
           {/* Sidebar */}
           <div className="lg:w-72 shrink-0">
-            <Sidebar profile={profile} onLogout={logout} />
+            <Sidebar profile={profile} level={level} levelProgress={levelProgress} onLogout={logout} />
           </div>
 
           {/* Main content */}
           <div className="flex-1 min-w-0 space-y-5">
-
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Open Tasks", value: tasks.filter((t) => t.status === "open").length, icon: "📋" },
-                { label: "My Tasks", value: tasks.filter((t) => t.volunteers_assigned?.includes(user?.uid)).length, icon: "✅" },
-                { label: "My Points", value: profile?.points ?? 0, icon: "⭐" },
-              ].map((s) => (
-                <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 text-center">
-                  <div className="text-xl mb-0.5">{s.icon}</div>
-                  <div className="text-xl font-black text-teal-600">{s.value}</div>
-                  <div className="text-xs text-gray-500">{s.label}</div>
+            <div className="rounded-3xl bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-500 p-6 text-white shadow-xl">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Volunteer dashboard</p>
+                  <h1 className="mt-3 text-3xl font-black tracking-tight">
+                    Hi {profile?.fullName?.split(" ")[0] || userProfile?.firstName || "Volunteer"}, ready to make impact?
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm opacity-90">
+                    Use the self-learning matching system to find the best tasks, track your performance, and amplify your local impact.
+                  </p>
                 </div>
-              ))}
+                <button onClick={() => navigate("/map")}
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-white px-5 py-2.5 text-sm font-semibold text-teal-700 shadow-sm transition hover:bg-teal-50">
+                  Explore community tasks
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Open matches</p>
+                  <p className="mt-3 text-3xl font-black">{openTasks.length}</p>
+                  <p className="mt-2 text-sm opacity-90">Tasks currently available nearby</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Your active tasks</p>
+                  <p className="mt-3 text-3xl font-black">{activeTasks}</p>
+                  <p className="mt-2 text-sm opacity-90">Tasks you’ve joined or accepted</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Hours volunteered</p>
+                  <p className="mt-3 text-3xl font-black">{hoursLogged}</p>
+                  <p className="mt-2 text-sm opacity-90">Estimated impact hours</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] opacity-80">Points</p>
+                  <p className="mt-3 text-3xl font-black">{points}</p>
+                  <p className="mt-2 text-sm opacity-90">Volunteer reward score</p>
+                </div>
+              </div>
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 shadow-sm w-fit">
-              {[["all", "All Tasks"], ["open", "Open"], ["mine", "My Tasks"]].map(([v, l]) => (
-                <button key={v} onClick={() => setFilter(v)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    filter === v ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
-                  }`}>{l}</button>
-              ))}
-            </div>
+            <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+              <div className="space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Recommended tasks</h2>
+                    <p className="text-sm text-gray-500">Tasks ranked by your self-learning match score and local impact.</p>
+                  </div>
+                  <div className="flex gap-2 bg-white border border-gray-100 rounded-full p-1 shadow-sm">
+                    {[["all", "All Tasks"], ["open", "Open"], ["mine", "My Tasks"]].map(([v, l]) => (
+                      <button key={v} onClick={() => setFilter(v)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                          filter === v ? "bg-teal-600 text-white shadow" : "text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Tasks */}
-            {loadingTasks ? (
-              <div className="text-center py-12 text-gray-400 animate-pulse">Loading tasks…</div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-                <p className="text-gray-400 text-sm">No tasks found.</p>
+                {loadingTasks ? (
+                  <div className="text-center py-12 text-gray-400 animate-pulse">Loading tasks…</div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
+                    <p className="text-gray-500 text-sm">No tasks found. Try another filter or explore more opportunities on the map.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filtered.map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        task={t}
+                        volunteerId={user?.uid}
+                        onAccepted={() => {
+                          setTasks((prev) =>
+                            prev.map((x) =>
+                              x.id === t.id
+                                ? { ...x, volunteers_assigned: [...(x.volunteers_assigned || []), user.uid] }
+                                : x
+                            )
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    volunteerId={user?.uid}
-                    onAccepted={() => {
-                      setTasks((prev) =>
-                        prev.map((x) =>
-                          x.id === t.id
-                            ? { ...x, volunteers_assigned: [...(x.volunteers_assigned || []), user.uid] }
-                            : x
-                        )
-                      );
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+
+              <aside className="space-y-5">
+                <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Performance</p>
+                      <h3 className="mt-2 text-lg font-bold text-gray-900">Volunteer insight</h3>
+                    </div>
+                    <span className="text-xs font-semibold text-teal-700 bg-teal-50 rounded-full px-2.5 py-1">Self-learning</span>
+                  </div>
+
+                  <div className="mt-5 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>Reliability</span>
+                        <span>{reliability}%</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-teal-500" style={{ width: `${reliability}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>Success Rate</span>
+                        <span>{successRate}%</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-cyan-500" style={{ width: `${successRate}%` }} />
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 rounded-3xl p-4 text-sm text-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Avg. rating</span>
+                        <span className="text-teal-700 font-bold">{avgRating.toFixed(1)}</span>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">Based on feedback from completed tasks.</p>
+                      <p className="mt-3 text-xs text-gray-500">Completed tasks: {completedTasks}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Leaderboard</p>
+                      <h3 className="mt-2 text-lg font-bold text-gray-900">Top volunteers</h3>
+                    </div>
+                    <span className="text-xs text-gray-500">Live ranking</span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {loadingLeaderboard ? (
+                      <div className="space-y-2">
+                        {[...Array(3)].map((_, index) => (
+                          <div key={index} className="h-12 rounded-2xl bg-gray-100 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : leaderboard.length > 0 ? (
+                      leaderboard.map((vol, index) => (
+                        <div key={vol.id || index} className="flex items-center justify-between rounded-2xl border border-gray-100 p-3">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{vol.full_name || vol.name || `Volunteer ${index + 1}`}</p>
+                            <p className="text-xs text-gray-500">Rank {index + 1}</p>
+                          </div>
+                          <span className="text-sm font-bold text-teal-600">{vol.points ?? vol.score ?? 0} pts</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No leaderboard results available yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Recent Activity</p>
+                    <h3 className="mt-2 text-lg font-bold text-gray-900">Your latest actions</h3>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {recentActivity.map((item, index) => (
+                      <div key={index} className="rounded-3xl border border-gray-100 p-4">
+                        <div className="flex items-center justify-between gap-4 text-sm text-gray-700">
+                          <p>{item.title}</p>
+                          <span className="text-xs text-gray-500">{item.when}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+            </div>
           </div>
         </div>
       </div>

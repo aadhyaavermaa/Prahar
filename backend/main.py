@@ -10,6 +10,9 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
+# Import matching system modules
+from matching_routes import matching_router
+
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -17,6 +20,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 load_dotenv()
 
 app = FastAPI(title="PRAHAR API")
+
+# Include the matching system router
+app.include_router(matching_router)
 
 # Allow React frontend to call this API
 app.add_middleware(
