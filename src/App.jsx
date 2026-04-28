@@ -1,6 +1,4 @@
 import { Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
-import { LanguageProvider } from './context/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -37,36 +35,32 @@ if (typeof window !== 'undefined') {
 
 function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <Routes>
-        <Route path="/" element={<WithLayout><Landing /></WithLayout>} />
-        <Route path="/login" element={<WithLayout><Login /></WithLayout>} />
-        <Route path="/signup" element={<WithLayout><Signup /></WithLayout>} />
+    <Routes>
+      <Route path="/" element={<WithLayout><Landing /></WithLayout>} />
+      <Route path="/login" element={<WithLayout><Login /></WithLayout>} />
+      <Route path="/signup" element={<WithLayout><Signup /></WithLayout>} />
 
-        <Route path="/map" element={<TaskMapPage />} />
-        <Route path="/impact" element={<WithLayout><ImpactShowcase /></WithLayout>} />
-        <Route path="/leaderboard" element={<WithLayout><Leaderboard /></WithLayout>} />
+      <Route path="/map" element={<TaskMapPage />} />
+      <Route path="/impact" element={<WithLayout><ImpactShowcase /></WithLayout>} />
+      <Route path="/leaderboard" element={<WithLayout><Leaderboard /></WithLayout>} />
 
-        <Route path="/volunteer/onboarding" element={
-          <ProtectedRoute allowedRoles={['volunteer']}>
-            <Onboarding />
-          </ProtectedRoute>
-        } />
-        <Route path="/volunteer/dashboard" element={
-          <ProtectedRoute allowedRoles={['volunteer']}>
-            <VolunteerDashboard />
-          </ProtectedRoute>
-        } />
+      <Route path="/volunteer/onboarding" element={
+        <ProtectedRoute allowedRoles={['volunteer']}>
+          <Onboarding />
+        </ProtectedRoute>
+      } />
+      <Route path="/volunteer/dashboard" element={
+        <ProtectedRoute allowedRoles={['volunteer']}>
+          <VolunteerDashboard />
+        </ProtectedRoute>
+      } />
 
-        <Route path="/ngo/dashboard" element={
-          <ProtectedRoute allowedRoles={['ngo']}>
-            <NgoDashboard />
-          </ProtectedRoute>
-        } />
-      </Routes>
-      </AuthProvider>
-    </LanguageProvider>
+      <Route path="/ngo/dashboard" element={
+        <ProtectedRoute allowedRoles={['ngo']}>
+          <NgoDashboard />
+        </ProtectedRoute>
+      } />
+    </Routes>
   )
 }
 

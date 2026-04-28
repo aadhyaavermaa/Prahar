@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useLang } from "../../context/LanguageContext";
@@ -220,6 +220,7 @@ function Sidebar({ profile, level, levelProgress, onLogout }) {
 export default function VolunteerDashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, lang } = useLang();
 
   const [tasks, setTasks] = useState([]);
@@ -306,6 +307,14 @@ export default function VolunteerDashboard() {
     },
   ];
 
+  const topTabs = [
+    { label: t('home'), path: "/" },
+    { label: t('liveMap'), path: "/map" },
+    { label: t('impact'), path: "/impact" },
+    { label: t('leaderboard'), path: "/leaderboard" },
+    { label: lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard', path: "/volunteer/dashboard" },
+  ];
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -318,10 +327,26 @@ export default function VolunteerDashboard() {
     <div className="min-h-screen bg-[#f8fafb]">
 
       {/* Topbar */}
-      <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>{t('back')}</button>
           <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
+        </div>
+        <div className="hidden lg:flex items-center gap-2">
+          {topTabs.map((tab) => {
+            const active = location.pathname === tab.path
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  active ? "bg-teal-600 text-white shadow-sm" : "text-gray-600 hover:text-teal-700 hover:bg-teal-50"
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-700">

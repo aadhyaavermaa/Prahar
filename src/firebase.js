@@ -2,20 +2,32 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'
 
+const firebaseEnv = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+const missingFirebaseVars = Object.entries(firebaseEnv)
+  .filter(([, value]) => !value)
+  .map(([key]) => key)
+
+if (missingFirebaseVars.length > 0) {
+  console.warn(`Missing Firebase config values: ${missingFirebaseVars.join(', ')}`)
+}
+
 const firebaseConfig = {
-  apiKey: "AIzaSyBZiBScTGSXOQLd39Udg7Z4M94pfcwKvgw",
-  authDomain: "prahar-b7b72.firebaseapp.com",
-  projectId: "prahar-b7b72",
-  storageBucket: "prahar-b7b72.firebasestorage.app",
-  messagingSenderId: "550476506353",
-  appId: "1:550476506353:web:79ed253939e54dd8ecb550",
-  measurementId: "G-JVYMFGS9LQ"
-};
+  ...firebaseEnv,
+}
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider)
 

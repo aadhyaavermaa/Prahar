@@ -17,6 +17,7 @@ const Onboarding = () => {
   const [step, setStep] = useState(1) // 1 = form, 2 = success
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const FIRESTORE_TIMEOUT_MS = 6000
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -54,12 +55,26 @@ const Onboarding = () => {
 
     setLoading(true)
     try {
-      await saveVolunteerProfile(devUser.uid, formData)
-      if (user) await refreshProfile()
+      await Promise.race([
+        saveVolunteerProfile(devUser.uid, formData),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile save timeout')), FIRESTORE_TIMEOUT_MS)),
+      ])
+
+      if (user) {
+        try {
+          await Promise.race([
+            refreshProfile(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Profile refresh timeout')), FIRESTORE_TIMEOUT_MS)),
+          ])
+        } catch (refreshErr) {
+          console.warn('Profile refresh failed after onboarding save:', refreshErr)
+        }
+      }
       setStep(2)
     } catch (err) {
       console.error(err)
-      setErrors({ submit: 'Failed to save. Please try again.' })
+      setErrors({ submit: 'Profile save is delayed. You can continue to dashboard and retry later.' })
+      setStep(2)
     } finally {
       setLoading(false)
     }

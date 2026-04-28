@@ -32,6 +32,7 @@ const Signup = () => {
   const navigate = useNavigate()
   const cardRef = useRef(null)
   const { t, lang } = useLang()
+  const FIRESTORE_TIMEOUT_MS = 5000
 
   // Scale card to fit viewport without scrolling
   useEffect(() => {
@@ -93,22 +94,30 @@ const Signup = () => {
       const firestoreRole = toFirestoreRole(role)
 
       // Save user profile with role + signup metadata
-      await createUserProfile(result.user.uid, {
-        role: firestoreRole,
-        signupRole: role,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        contactNo: formData.contactNo,
-        email: formData.email,
-        ...(role === ROLES.VOLUNTEER_ASSOCIATED && { ngoAssociated: formData.ngoAssociated, volunteerRole: formData.volunteerRole }),
-        ...(role === ROLES.VOLUNTEER_NEW && { skills: formData.skills, availability: formData.availability }),
-        ...(role === ROLES.NGO && { ngoName: formData.ngoName, ngoRegNumber: formData.ngoRegNumber, designation: formData.designation, ngoWebsite: formData.ngoWebsite }),
-        createdAt: new Date(),
-      })
+      try {
+        await Promise.race([
+          createUserProfile(result.user.uid, {
+            role: firestoreRole,
+            signupRole: role,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            contactNo: formData.contactNo,
+            email: formData.email,
+            ...(role === ROLES.VOLUNTEER_ASSOCIATED && { ngoAssociated: formData.ngoAssociated, volunteerRole: formData.volunteerRole }),
+            ...(role === ROLES.VOLUNTEER_NEW && { skills: formData.skills, availability: formData.availability }),
+            ...(role === ROLES.NGO && { ngoName: formData.ngoName, ngoRegNumber: formData.ngoRegNumber, designation: formData.designation, ngoWebsite: formData.ngoWebsite }),
+            createdAt: new Date(),
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile write timeout')), FIRESTORE_TIMEOUT_MS)),
+        ])
+      } catch (profileErr) {
+        console.warn('Profile creation failed, continuing with auth account:', profileErr)
+      }
 
       const path = await getRedirectPath(result.user.uid, firestoreRole)
       navigate(path)
     } catch (err) {
+      console.error(err)
       setErrors({ submit: friendlyError(err.code) })
     } finally {
       setLoading(false)
@@ -121,12 +130,21 @@ const Signup = () => {
     try {
       const result = await signInWithGoogle()
       const firestoreRole = toFirestoreRole(role)
-      await createUserProfile(result.user.uid, {
-        role: firestoreRole,
-        signupRole: role,
-        email: result.user.email,
-        createdAt: new Date(),
-      })
+
+      try {
+        await Promise.race([
+          createUserProfile(result.user.uid, {
+            role: firestoreRole,
+            signupRole: role,
+            email: result.user.email,
+            createdAt: new Date(),
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile write timeout')), FIRESTORE_TIMEOUT_MS)),
+        ])
+      } catch (profileErr) {
+        console.warn('Profile creation failed after Google signup, continuing:', profileErr)
+      }
+
       const path = await getRedirectPath(result.user.uid, firestoreRole)
       navigate(path)
     } catch (err) {

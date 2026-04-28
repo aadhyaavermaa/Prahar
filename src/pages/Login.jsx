@@ -12,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { t, lang } = useLang()
+  const FIRESTORE_TIMEOUT_MS = 5000
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
 
@@ -29,11 +30,22 @@ const Login = () => {
     setLoading(true)
     try {
       const result = await signInWithEmailAndPassword(auth, formData.email, formData.password)
-      const profile = await getUserProfile(result.user.uid)
-      const role = profile?.role || formData.userType
+      let role = formData.userType
+
+      try {
+        const profile = await Promise.race([
+          getUserProfile(result.user.uid),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), FIRESTORE_TIMEOUT_MS)),
+        ])
+        role = profile?.role || formData.userType
+      } catch (profileErr) {
+        console.warn('Profile read failed, continuing with selected role:', profileErr)
+      }
+
       const path = await getRedirectPath(result.user.uid, role)
       navigate(path)
     } catch (err) {
+      console.error(err)
       setErrors({ submit: friendlyError(err.code) })
     } finally {
       setLoading(false)
@@ -45,11 +57,22 @@ const Login = () => {
     setLoading(true)
     try {
       const result = await signInWithGoogle()
-      const profile = await getUserProfile(result.user.uid)
-      const role = profile?.role || formData.userType
+      let role = formData.userType
+
+      try {
+        const profile = await Promise.race([
+          getUserProfile(result.user.uid),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), FIRESTORE_TIMEOUT_MS)),
+        ])
+        role = profile?.role || formData.userType
+      } catch (profileErr) {
+        console.warn('Profile read failed after Google login, continuing:', profileErr)
+      }
+
       const path = await getRedirectPath(result.user.uid, role)
       navigate(path)
     } catch (err) {
+      console.error(err)
       setGoogleError(friendlyError(err.code))
     } finally {
       setLoading(false)

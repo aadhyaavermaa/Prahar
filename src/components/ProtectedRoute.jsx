@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 // Set to true to bypass auth for local UI development
-const DEV_BYPASS = true
+const DEV_BYPASS = false
 
 // allowedRoles: ['volunteer'] | ['ngo'] | undefined (any logged-in user)
 const ProtectedRoute = ({ children, allowedRoles }) => {

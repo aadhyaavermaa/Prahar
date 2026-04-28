@@ -1,13 +1,20 @@
 import TaskMap from '../components/TaskMap'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 
 export default function TaskMapPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useLang()
+  const topTabs = [
+    { label: t('home'), path: '/' },
+    { label: t('liveMap'), path: '/map' },
+    { label: t('impact'), path: '/impact' },
+    { label: t('leaderboard'), path: '/leaderboard' },
+  ]
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', background: '#020617', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#0f172a', borderBottom: '1px solid #1e293b', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 24px', background: '#0f172a', borderBottom: '1px solid #1e293b', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#94a3b8', cursor: 'pointer', padding: '6px 12px', fontSize: 13, fontWeight: 600 }}>{t('back')}</button>
           <span style={{ fontSize: 24 }}>🛰️</span>
@@ -15,6 +22,29 @@ export default function TaskMapPage() {
             <h1 style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0, lineHeight: 1.2 }}>{t('mapTitle')}</h1>
             <p style={{ color: '#64748b', fontSize: 12, margin: 0 }}>{t('mapSubtitle')}</p>
           </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {topTabs.map((tab) => {
+            const active = location.pathname === tab.path
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: active ? '1px solid #14b8a6' : '1px solid #334155',
+                  background: active ? '#0f766e' : 'transparent',
+                  color: active ? '#ccfbf1' : '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#10b981', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{t('systemStatus')}</div>

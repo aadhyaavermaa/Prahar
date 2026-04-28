@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLang } from "../../context/LanguageContext";
 
 const BASE = "http://localhost:8000";
@@ -300,6 +300,7 @@ function RedistributionPanel() {
 export default function NgoDashboard() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLang();
 
   const [zones, setZones] = useState([]);
@@ -344,6 +345,13 @@ export default function NgoDashboard() {
   const totalAssigned = tasks.reduce((s, t) => s + (t.volunteers_assigned?.length ?? 0), 0);
   const ngoPoints = ngoData?.points ?? 0;
   const tier = tierInfo(ngoPoints);
+  const topTabs = [
+    { label: t('home'), path: "/" },
+    { label: t('liveMap'), path: "/map" },
+    { label: t('impact'), path: "/impact" },
+    { label: t('leaderboard'), path: "/leaderboard" },
+    { label: t('ngoDashboard'), path: "/ngo/dashboard" },
+  ];
 
   const logout = async () => {
     const { getAuth, signOut } = await import("firebase/auth");
@@ -370,11 +378,27 @@ export default function NgoDashboard() {
       <div className="min-h-screen bg-[#f8fafb] font-sans">
 
         {/* ── Topbar ── */}
-        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-40">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: '1.5px solid #10b981', borderRadius: '8px', color: '#10b981', cursor: 'pointer', padding: '4px 12px', fontSize: '13px', fontWeight: '600' }}>← Back</button>
             <span className="text-2xl font-black text-teal-600 tracking-tight">PRAHAR</span>
             <span className="hidden sm:block text-xs text-gray-400 font-medium border-l border-gray-200 pl-3">{t('ngoCommandCentre')}</span>
+          </div>
+          <div className="hidden lg:flex items-center gap-2">
+            {topTabs.map((tab) => {
+              const active = location.pathname === tab.path
+              return (
+                <button
+                  key={tab.path}
+                  onClick={() => navigate(tab.path)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    active ? "bg-teal-600 text-white shadow-sm" : "text-gray-600 hover:text-teal-700 hover:bg-teal-50"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-700">

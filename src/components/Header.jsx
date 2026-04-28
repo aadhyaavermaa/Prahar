@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -8,6 +9,16 @@ const Header = () => {
   const location = useLocation()
   const showBack = location.pathname !== '/'
   const { t, toggleLang } = useLang()
+  const { user, userProfile, logout } = useAuth()
+
+  const dashboardPath = userProfile?.role === 'ngo' ? '/ngo/dashboard' : '/volunteer/dashboard'
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const isActive = (path) => location.pathname === path
 
   return (
     <header className="header">
@@ -37,10 +48,10 @@ const Header = () => {
           </div>
 
           <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
-            <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('home')}</Link>
-            <Link to="/map" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('liveMap')}</Link>
-            <Link to="/impact" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('impact')}</Link>
-            <Link to="/leaderboard" className="nav-link" onClick={() => setIsMenuOpen(false)}>{t('leaderboard')}</Link>
+            <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)}>{t('home')}</Link>
+            <Link to="/map" className={`nav-link ${isActive('/map') ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)}>{t('liveMap')}</Link>
+            <Link to="/impact" className={`nav-link ${isActive('/impact') ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)}>{t('impact')}</Link>
+            <Link to="/leaderboard" className={`nav-link ${isActive('/leaderboard') ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)}>{t('leaderboard')}</Link>
             <Link to="/volunteer/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>{t('volDashboard')}</Link>
             <Link to="/ngo/dashboard" className="nav-link nav-link--dev" onClick={() => setIsMenuOpen(false)}>{t('ngoDashboard')}</Link>
           </div>
@@ -59,8 +70,19 @@ const Header = () => {
             >
               {t('langToggle')}
             </button>
-            <button className="btn btn-outline" onClick={() => navigate('/login')}>{t('login')}</button>
-            <button className="btn btn-primary" onClick={() => navigate('/signup')}>{t('signUp')}</button>
+            {user ? (
+              <>
+                <button className="btn btn-outline" onClick={() => navigate(dashboardPath)}>
+                  {userProfile?.role === 'ngo' ? t('ngoDashboard') : t('volDashboard')}
+                </button>
+                <button className="btn btn-primary" onClick={handleLogout}>{t('logout')}</button>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-outline" onClick={() => navigate('/login')}>{t('login')}</button>
+                <button className="btn btn-primary" onClick={() => navigate('/signup')}>{t('signUp')}</button>
+              </>
+            )}
           </div>
 
           <button className="nav-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
